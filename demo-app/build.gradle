@@ -1,0 +1,41 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("io.github.tiktok.knit:knit-plugin:$remoteKnitVersion")
+    }
+}
+
+apply(plugin: "com.android.application")
+apply(plugin: "org.jetbrains.kotlin.android")
+apply(plugin: "io.github.tiktok.knit.plugin")
+
+android {
+    namespace "tiktok.knit.app"
+    compileSdk 33
+    compileSdkVersion = 33
+
+    defaultConfig {
+        applicationId "tiktok.knit.app"
+        minSdk 24
+        targetSdk 33
+        compileSdk 33
+        versionCode 1
+        versionName "1.0"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+}
+
+dependencies {
+    implementation("io.github.tiktok.knit:knit:$knitVersion")
+}
