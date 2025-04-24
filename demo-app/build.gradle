@@ -1,16 +1,8 @@
-buildscript {
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
-    dependencies {
-        classpath("io.github.tiktok.knit:knit-plugin:$remoteKnitVersion")
-    }
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'io.github.tiktok.knit.plugin' version "${remoteKnitVersion}"
 }
-
-apply(plugin: "com.android.application")
-apply(plugin: "org.jetbrains.kotlin.android")
-apply(plugin: "io.github.tiktok.knit.plugin")
 
 android {
     namespace "tiktok.knit.app"
@@ -37,5 +29,5 @@ android {
 }
 
 dependencies {
-    implementation("io.github.tiktok.knit:knit:$knitVersion")
+    implementation("io.github.tiktok.knit:knit:$remoteKnitVersion")
 }
