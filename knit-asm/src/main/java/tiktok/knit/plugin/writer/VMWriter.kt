@@ -64,6 +64,9 @@ fun generateVMLogic(context: KnitContext, classNode: ClassNode, thisComponent: B
     val allVMProperties = getVMProperties(context, classNode, thisComponent)
     if (allVMProperties.isEmpty()) return
 
+    val componentClass = context.componentMap[classNode.name]
+    componentClass?.vmPropertyInternalNames?.addAll(allVMProperties.map { it.type.internalName })
+
     // create vm prop provider functions
     for (vmProp in allVMProperties) {
         val backendFunctionName = vmProp.property.name + "\$knitVm"
