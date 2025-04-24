@@ -3,7 +3,7 @@
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/tiktok/knit/test.yaml?branch=master&style=flat-square)
 [![GitHub license](https://img.shields.io/github/license/tiktok/knit?style=flat-square)](https://github.com/tiktok/knit/blob/master/LICENSE)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.tiktok.knit/knit-plugin?style=flat-square&color=coral)](https://central.sonatype.com/artifact/io.github.tiktok.knit/knit-plugin)
-[![Gradle](https://img.shields.io/gradle-plugin-portal/v/io.github.tiktok.knit.plugin?style=flat-square&color=lightskyblue)](https://central.sonatype.com/artifact/io.github.tiktok.knit/knit-plugin)
+[![Gradle](https://img.shields.io/gradle-plugin-portal/v/io.github.tiktok.knit.plugin?style=flat-square&color=lightskyblue)](https://plugins.gradle.org/plugin/io.github.tiktok.knit.plugin)
 
 ![Knit Banner](docs/main_logo.svg)
 
@@ -53,7 +53,7 @@ Check [the Advance Usage](docs/README.md) document for more, we have a separate 
 
 Knit supports all JVM applications, including Android applications, and here is the latest Knit version ↓
 
-[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/io.github.tiktok.knit.plugin?style=flat-square&color=lightskyblue)](https://central.sonatype.com/artifact/io.github.tiktok.knit/knit-plugin)
+[![Gradle Plugin Portal](https://img.shields.io/gradle-plugin-portal/v/io.github.tiktok.knit.plugin?style=flat-square&color=lightskyblue)](https://plugins.gradle.org/plugin/io.github.tiktok.knit.plugin)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.tiktok.knit/knit-plugin?style=flat-square&logo=apache-maven?color=coral)](https://central.sonatype.com/artifact/io.github.tiktok.knit/knit-plugin)
 
 ### Setup with Android Transform
