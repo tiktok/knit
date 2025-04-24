@@ -65,7 +65,7 @@ fun generateVMLogic(context: KnitContext, classNode: ClassNode, thisComponent: B
     if (allVMProperties.isEmpty()) return
 
     val componentClass = context.componentMap[classNode.name]
-    componentClass?.vmPropertyInternalNames?.addAll(allVMProperties.map { it.type.internalName })
+    componentClass?.injectedVmTypes?.addAll(allVMProperties.map { it.type.internalName })
 
     // create vm prop provider functions
     for (vmProp in allVMProperties) {
