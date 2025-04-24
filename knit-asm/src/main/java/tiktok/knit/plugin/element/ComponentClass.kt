@@ -26,6 +26,7 @@ import tiktok.knit.plugin.knitVMAnnotationDesc
 import tiktok.knit.plugin.providesDesc
 import tiktok.knit.plugin.singletonDesc
 import tiktok.knit.plugin.toFieldAccess
+import tiktok.knit.plugin.writer.VMProperty
 import kotlin.metadata.Visibility
 import kotlin.metadata.isSecondary
 import kotlin.metadata.jvm.signature
@@ -55,6 +56,11 @@ data class ComponentClass(
         internalName, parents, emptyList(), mutableListOf(),
         emptyMap(), emptyList(), emptyList(), false,
     )
+
+    /**
+     * The internal name of all vm properties in this component class.
+     * */
+    val vmPropertyInternalNames = hashSetOf<InternalName>()
 
     companion object {
         fun from(container: MetadataContainer): ComponentClass {
