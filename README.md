@@ -10,9 +10,9 @@
 
 Knit is a purely static, compile-time safe DI framework that leverages Kotlin language features to provide zero-intermediary dependency injection with exceptional ease of use.
 
-Knit means connecting (dependencies between codes), which is what our framework does.
+Knit means connecting (dependencies between code), which is what our framework does.
 
-## Basic Usages
+## Basic Usage
 
 ```kotlin
 @Provides
@@ -32,21 +32,21 @@ fun main() {
 
 There are 2 basic concepts in Knit:
 
-- `@Provides`, producers should be marked with `@Provides`, it means this member can be used for provide something.
+- `@Provides`, producers should be marked with `@Provides`, it means this member can be used to provide something.
 - `by di`, consumers should be marked with `by di`, marked properties should be injected by dependency injection.
 
 In the previous case:
 
-- `User` has be marked with `@Provides`, it means `User` provides its constructor as a dependency provider, and this
-  provider need a `String` provided to construct a `User`.
-- `UserService` has a constructor which need a `String` and it also provides this type inside `UserService`.
+- `User` has been marked with `@Provides`, it means `User` provides its constructor as a dependency provider, and this
+  provider needs a `String` provided to construct a `User`.
+- `UserService` has a constructor which needs a `String` and it also provides this type inside `UserService`.
 - `UserService.user` can be injected through provided `User` constructor and provided parameter `name`.
 - For `UserService` call-site, the only thing needs to do is construct it like a normal constructor call, and access its
   member directly.
 
-## Advance Usages 📚
+## Advance Usage 📚
 
-Check [the Advance Usages](docs/README.md) document for more, we have a separate page to show the detailed usages and some principles
+Check [the Advance Usage](docs/README.md) document for more, we have a separate page to show the detailed usage and some principles
 
 ## Setup 📦
 
@@ -84,7 +84,7 @@ Knit supports all JVM applications, including Android applications, and here is 
 
 ### Setup for other JVM applications
 
-Knit has isolated with Android transform process, you can apply Knit plugin for other JVM applications.
+Knit is isolated from the Android transform process, you can apply Knit plugin for other JVM applications.
 
 1. Add classpath to your project's buildscript `build.gradle`.
     
