@@ -166,8 +166,7 @@ class KnitContextImpl(
     private fun calculateVMRelatedClasses(changedClass: String): Collection<InternalName> {
         val componentMap = componentMap
         return componentMap.filter {
-            val vmPropertyInterNames = it.value.vmPropertyInternalNames
-            return@filter vmPropertyInterNames.contains(changedClass)
+            changedClass in it.value.vmPropertyInternalNames
         }.keys
     }
 
