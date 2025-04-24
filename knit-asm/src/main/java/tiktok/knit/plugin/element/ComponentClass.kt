@@ -57,9 +57,7 @@ data class ComponentClass(
         emptyMap(), emptyList(), emptyList(), false,
     )
 
-    /**
-     * The internal name of all vm properties in this component class.
-     * */
+    // Internal names of all vm properties in this component class, used for incremental build
     val vmPropertyInternalNames = hashSetOf<InternalName>()
 
     companion object {
