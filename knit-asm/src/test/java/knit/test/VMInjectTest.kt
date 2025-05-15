@@ -14,6 +14,7 @@ import knit.test.base.knitTypeOf
 import knit.test.base.new
 import knit.test.base.readContainers3
 import knit.test.base.readContainers5
+import knit.test.base.readContainers7
 import knit.test.base.toContext
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -29,15 +30,26 @@ import tiktok.knit.plugin.writer.ComponentWriter
 @TestTargetClass(ComponentWriter::class)
 class VMInjectTest : KnitTestCase {
     class CustomVM @KnitViewModel constructor(val str: String) : ViewModel()
+    class ChildVM @KnitViewModel constructor(val str: String) : ViewModel()
 
     @Component
-    class VMContainer : Fragment() {
-        private val vm by knitViewModel<CustomVM>()
+    open class VMContainer : Fragment() {
+        protected val vm by knitViewModel<CustomVM>()
 
         @Provides
         val myStr: String = "114514"
         fun validate() {
             Assertions.assertEquals(myStr, vm.str)
+        }
+    }
+
+    @Component
+    class ChildContainer : VMContainer() {
+        private val childVM by knitViewModel<ChildVM>()
+
+        fun validateChild() {
+            Assertions.assertEquals(myStr, vm.str)
+            Assertions.assertEquals(myStr, childVM.str)
         }
     }
 
@@ -52,9 +64,18 @@ class VMInjectTest : KnitTestCase {
             CustomVM, VMContainer, GlobalProvides, VMInjectTest, VMPFactoryImpl,
             >()
         val loader = containers.toContext().toClassLoader()
-        val obj0 = loader.new<VMContainer>()["validate"]().obj
-        val obj1 = loader.new<VMContainer>()["validate"]().obj
-        Assertions.assertTrue(obj0 === obj1)
+        loader.new<VMContainer>()["validate"]()
+    }
+
+    @Test
+    fun `test child view model injection`() {
+        val containers = readContainers7<
+            CustomVM, VMContainer, GlobalProvides, VMInjectTest, VMPFactoryImpl,
+            ChildContainer, ChildVM,
+            >()
+        val loader = containers.toContext().toClassLoader()
+        loader.dump()
+        loader.new<ChildContainer>()["validateChild"]()
     }
 
     @Test

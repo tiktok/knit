@@ -10,7 +10,10 @@ import knit.test.base.KnitMock
  * @author yuejunyu.0
  */
 @KnitMock
-class VMPFactoryImpl(arrayMap: Array<*>) : ViewModelProvider.Factory {
+class VMPFactoryImpl(
+    arrayMap: Array<*>,
+    private val parent: ViewModelProvider.Factory?,
+) : ViewModelProvider.Factory {
     private val factories: Map<Class<*>, Factory<*>>
 
     init {
@@ -38,14 +41,15 @@ class VMPFactoryImpl(arrayMap: Array<*>) : ViewModelProvider.Factory {
             }
         }
 
-        val name = modelClass.name
-        throw IllegalArgumentException("cannot create view model: $name, maybe you are trying inject ViewModel for local class/variable.")
+        val defaultProvider = parent ?: throw IllegalArgumentException("no parent for ${modelClass.name}.")
+        return defaultProvider.create(modelClass)
     }
 
     companion object {
+        // only called from bytecode
         @JvmStatic
-        fun from(arrayMap: Array<*>): ViewModelProvider.Factory {
-            return VMPFactoryImpl(arrayMap)
+        fun from(arrayMap: Array<*>, parent: ViewModelProvider.Factory?): ViewModelProvider.Factory {
+            return VMPFactoryImpl(arrayMap, parent)
         }
     }
 }

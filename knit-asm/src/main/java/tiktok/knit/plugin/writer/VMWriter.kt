@@ -12,9 +12,11 @@ import org.objectweb.asm.tree.FieldNode
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.MethodNode
 import tiktok.knit.plugin.KnitContext
+import tiktok.knit.plugin.aconstNull
 import tiktok.knit.plugin.aload
 import tiktok.knit.plugin.areturn
 import tiktok.knit.plugin.asMetadataContainer
+import tiktok.knit.plugin.astore
 import tiktok.knit.plugin.element.BoundComponentClass
 import tiktok.knit.plugin.element.KnitClassifier
 import tiktok.knit.plugin.element.KnitType
@@ -52,15 +54,22 @@ private const val VM_FACTORY_DESC = "Landroidx/lifecycle/ViewModelProvider\$Fact
  * @author yuejunyu.0
  */
 class VMProperty(
-    val property: KmProperty,
+    val propertyName: VMPropertyName,
     val type: KnitType,
     val injection: Injection,
 )
+
+typealias VMPropertyName = String
 
 fun generateVMLogic(context: KnitContext, classNode: ClassNode, thisComponent: BoundComponentClass) {
     val inheritJudgement = context.inheritJudgement
     val isVmFactoryHolder = inheritJudgement.inherit(classNode.name, knitVmFactoryOwnerName)
     if (!isVmFactoryHolder) return
+
+    val parentClassName = thisComponent.parents.firstOrNull {
+        !it.component.isInterface
+    }?.component?.internalName
+
     val allVMProperties = getVMProperties(context, classNode, thisComponent)
     if (allVMProperties.isEmpty()) return
 
@@ -69,7 +78,7 @@ fun generateVMLogic(context: KnitContext, classNode: ClassNode, thisComponent: B
 
     // create vm prop provider functions
     for (vmProp in allVMProperties) {
-        val backendFunctionName = vmProp.property.name + "\$knitVm"
+        val backendFunctionName = vmProp.propertyName + "\$knitVm"
         val methodNode = MethodNode(
             VM_GEN_METHOD_ACCESS, backendFunctionName,
             "()$function0Desc",
@@ -91,7 +100,7 @@ fun generateVMLogic(context: KnitContext, classNode: ClassNode, thisComponent: B
 
     if (containsDefaultFactoryProviderMethod) illegalState(
         "cannot inject to HasDefaultViewModelProviderFactory.getDefaultViewModelProviderFactory for: ${thisComponent.internalName}\n" +
-            "cause you have declared some ViewModels are injected by Knit: ${allVMProperties.joinToString { it.property.name }} but you have implement the getDefaultViewModelProviderFactory",
+                "cause you have declared some ViewModels are injected by Knit: ${allVMProperties.joinToString { it.propertyName }} but you have implement the getDefaultViewModelProviderFactory",
     )
 
     val vmProviderCacheProp = FieldNode(
@@ -106,9 +115,17 @@ fun generateVMLogic(context: KnitContext, classNode: ClassNode, thisComponent: B
         null, emptyArray(),
     )
     generatedVmFactoryMethod.instructions = InsnList().apply {
-        writeSingletonAndReturn(
+        if (parentClassName == null) {
+            aconstNull()
+        } else {
+            aload(0)
+            invokeSpecial(parentClassName, DEFAULT_VM_FACTORY_METHOD_NAME, "()$VM_FACTORY_DESC")
+        }
+        astore(1)
+
+        val catches = writeSingletonAndReturn(
             classNode.name, vmProviderCacheProp.name, VM_FACTORY_DESC,
-            true, 1, -1,
+            true, 2, -1,
         ) {
             newArray(allVMProperties.size * 2, objectInternalName)
             var currentIndex = 0
@@ -118,17 +135,19 @@ fun generateVMLogic(context: KnitContext, classNode: ClassNode, thisComponent: B
                     ldc(type)
                 }
                 pushToArray(currentIndex + 1) {
-                    val backendFunctionName = vmProp.property.name + "\$knitVm"
+                    val backendFunctionName = vmProp.propertyName + "\$knitVm"
                     aload(0)
                     invokeSpecial(classNode.name, backendFunctionName, "()$function0Desc")
                 }
                 currentIndex += 2
             }
+            aload(1)
             invokeStatic(
                 knitVmFactoryImplName, "from",
-                "([L$objectInternalName;)$VM_FACTORY_DESC",
+                "([L$objectInternalName;$VM_FACTORY_DESC)$VM_FACTORY_DESC",
             )
         }
+        generatedVmFactoryMethod.tryCatchBlocks = catches
     }
     classNode.methods.add(generatedVmFactoryMethod)
 }
@@ -174,7 +193,7 @@ fun getVMProperties(
         val injections = InjectionBinder.buildInjectionFrom(findingContext)
         // must single
         val injection = injections.exactSingleInjection(thisComponent, propType) { providers }.getOrThrow()
-        allVMInjections += VMProperty(vmProp, propType, injection)
+        allVMInjections += VMProperty(vmProp.name, propType, injection)
     }
     return allVMInjections
 }
