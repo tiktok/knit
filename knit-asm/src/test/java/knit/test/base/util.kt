@@ -1,6 +1,6 @@
 package knit.test.base
 
-import com.google.common.collect.HashMultiset
+import com.google.common.collect.LinkedHashMultiset
 import knit.Named
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.assertThrows
@@ -189,8 +189,8 @@ fun KClass<*>.asKnitArrayType(
 fun <T> assertContentMatches(
     expected: Collection<T>, actual: Collection<T>,
 ) {
-    val expectedSet = HashMultiset.create(expected)
-    val actualSet = HashMultiset.create(actual)
+    val expectedSet = LinkedHashMultiset.create(expected)
+    val actualSet = LinkedHashMultiset.create(actual)
     Assertions.assertEquals(expectedSet, actualSet)
 }
 

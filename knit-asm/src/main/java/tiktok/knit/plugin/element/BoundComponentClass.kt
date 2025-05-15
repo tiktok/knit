@@ -175,7 +175,8 @@ private fun KnitType.attachTypeParams(params: Map<Int, KnitGenericType>): KnitTy
         if (param != null) classifier = param
     }
     val newTypeParams = typeParams.map { typeParam ->
-        typeParam.type?.attachTypeParams(params)?.toGeneric() ?: typeParam
+        val type = typeParam.type?.attachTypeParams(params) ?: return@map typeParam
+        typeParam.copy(type = type, bounds = emptyList())
     }
     return KnitType.from(classifier, nullable, named, newTypeParams)
 }

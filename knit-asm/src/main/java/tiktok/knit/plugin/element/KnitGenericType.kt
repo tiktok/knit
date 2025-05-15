@@ -43,9 +43,10 @@ data class KnitGenericType(
             if (!neededType.inherit(bound, inheritJudgement)) return false
         }
         when (neededVariance) {
+            IN -> return variance != OUT && neededType.inherit(type, inheritJudgement)
+            OUT -> return variance != IN && type.inherit(neededType, inheritJudgement)
             NO_VARIANCE -> return type.availableFor(neededType, inheritJudgement)
         }
-        // do not support available for generic type which contains variance
         return false
     }
 

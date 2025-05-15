@@ -1,9 +1,11 @@
 package knit.test
 
 import knit.Component
+import knit.IntoList
 import knit.JInt
 import knit.Named
 import knit.Provides
+import knit.di
 import knit.test.base.BuiltinInheritJudgement
 import knit.test.base.KnitTestCase
 import knit.test.base.TestTargetClass
@@ -12,6 +14,7 @@ import knit.test.base.knitTypeOf
 import knit.test.base.readContainer
 import knit.test.base.readContainers2
 import knit.test.base.toComponent
+import knit.test.base.toContext
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -186,5 +189,17 @@ class KnitTypeTest : KnitTestCase {
         val intAdapted = knitType.adaptBasicType(Type.INT_TYPE)
         Assertions.assertEquals(Type.getDescriptor(integerJavaClass), adapted.classifier.desc)
         Assertions.assertEquals(Type.INT_TYPE.descriptor, intAdapted.classifier.desc)
+    }
+
+    class TypeBoundsTest {
+        @Provides
+        @IntoList
+        fun provider(): Class<String> = String::class.java
+        val r: List<Class<out CharSequence>> by di
+    }
+
+    @Test
+    fun `test type bounds for by di and providers`() {
+        readContainer<TypeBoundsTest>().toContext()
     }
 }

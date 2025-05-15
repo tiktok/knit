@@ -70,7 +70,7 @@ object DIStubImpl : AbsDIStub()
 
 /** common delegate implementation stub */
 abstract class AbsDIStub : ReadOnlyProperty<Any, Nothing> {
-    override fun getValue(thisRef: Any, property: KProperty<*>): Nothing {
+    override operator fun getValue(thisRef: Any, property: KProperty<*>): Nothing {
         throw knitStubImplementationError(thisRef, property)
     }
 
