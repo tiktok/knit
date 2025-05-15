@@ -74,7 +74,6 @@ class VMInjectTest : KnitTestCase {
             ChildContainer, ChildVM,
             >()
         val loader = containers.toContext().toClassLoader()
-        loader.dump()
         loader.new<ChildContainer>()["validateChild"]()
     }
 
