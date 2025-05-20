@@ -66,7 +66,7 @@ object InjectionBinder {
         val allProvides = CPF.all(component, true) + globalContainer.all
         for (injectedGetter in injectedGetters) {
             val (_, funcName: FuncName, fieldType: KnitType) = injectedGetter
-            val allProvidesForSingleInjection = allProvides.ignoreItSelf(injectedGetter.identifier)
+            val allProvidesForSingleInjection = allProvides.ignoreItSelfWithParent(injectedGetter)
             val findingContext = FindInjectionContext(
                 factoryContext, component,
                 fieldType, allProvidesForSingleInjection, false,
