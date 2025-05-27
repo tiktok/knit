@@ -37,20 +37,26 @@ class BoundComponentClass(
     private fun findWayInternal(
         requiredComponent: InternalName,
         path: MutableComponentWay,
+        onlyPublic: Boolean,
     ): Boolean {
         if (internalName == requiredComponent) return true
         val parentWay = MutableComponentWay()
-        if (parents.any {
-                it.component.findWayInternal(requiredComponent, parentWay)
-            }) {
+
+        // find way from parents
+        for (parent in parents) {
+            val wayFound = parent.component.findWayInternal(requiredComponent, parentWay, true)
+            if (!wayFound) continue
             path.addAll(parentWay)
             return true
         }
+
+        // find way from composite component
         for ((accName: PropAccName, component: BoundCompositeComponent) in compositeComponents) {
+            if (onlyPublic && !component.isPublic) continue
             val pair = accName to component.component
             path.addLast(pair)
-            // don't need judge component visibility again, we have proceed it before.
-            if (component.component.findWayInternal(requiredComponent, path)) return true
+            val wayFound = component.component.findWayInternal(requiredComponent, path, true)
+            if (wayFound) return true
             path.removeLast()
         }
         return false
@@ -60,7 +66,7 @@ class BoundComponentClass(
         requiredComponent: InternalName,
     ): ComponentWay {
         val mutableComponentWay = MutableComponentWay()
-        val success = findWayInternal(requiredComponent, mutableComponentWay)
+        val success = findWayInternal(requiredComponent, mutableComponentWay, false)
         if (!success) {
             knitInternalError("cannot found a way to acquire $requiredComponent from $internalName")
         }
