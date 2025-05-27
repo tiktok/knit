@@ -3,6 +3,7 @@ package knit.test
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import knit.Component
+import knit.IgnoreInjection
 import knit.KnitViewModel
 import knit.Provides
 import knit.android.internal.VMPFactoryImpl
@@ -85,5 +86,16 @@ class VMInjectTest : KnitTestCase {
             VMContainerFails::class.internalName, knitTypeOf<String>(), emptyList(),
         )
         Assertions.assertEquals(expected.message, e.message)
+    }
+
+    class IgnoreInjectionTestTarget : VMContainer() {
+        @IgnoreInjection
+        private val childVM by knitViewModel<ChildVM>()
+    }
+
+    @Test
+    fun `test vm injection is ignored`() {
+        val containers = readContainers3<IgnoreInjectionTestTarget, ChildVM, GlobalProvides>()
+        containers.toContext().toClassLoader()
     }
 }

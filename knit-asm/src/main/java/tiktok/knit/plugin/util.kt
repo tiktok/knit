@@ -8,6 +8,7 @@ import knit.Component
 import knit.DIGetterStubImpl
 import knit.DIStubImpl
 import knit.Factory
+import knit.IgnoreInjection
 import knit.IntoList
 import knit.IntoMap
 import knit.IntoSet
@@ -250,6 +251,8 @@ val unboxFunctions = arrayOf(
 const val knitVmFactoryOwnerName: InternalName = "androidx/lifecycle/HasDefaultViewModelProviderFactory"
 const val knitVmFactoryImplName: InternalName = "knit/android/internal/VMPFactoryImpl"
 val knitVMAnnotationDesc = KnitViewModel::class.descName
+
+val ignoreInjectionDesc = IgnoreInjection::class.descName
 
 fun KmClassifier.internalName(): InternalName? {
     return when (this) {

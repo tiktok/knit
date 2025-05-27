@@ -19,6 +19,7 @@ import tiktok.knit.plugin.componentDesc
 import tiktok.knit.plugin.diMutStubDesc
 import tiktok.knit.plugin.diStubDesc
 import tiktok.knit.plugin.firstOrNull
+import tiktok.knit.plugin.ignoreInjectionDesc
 import tiktok.knit.plugin.illegalState
 import tiktok.knit.plugin.invoke
 import tiktok.knit.plugin.isPublic
@@ -169,7 +170,8 @@ data class ComponentClass(
                         getter, propertyType, singletonAnnotation.threadsafe,
                     )
                 }
-                when (delegatedField.desc) {
+                // ignore injection if annotated.
+                if (!annotations.annotated(ignoreInjectionDesc)) when (delegatedField.desc) {
                     diMutStubDesc -> injectedGetters += InjectedGetter.from(
                         internalName, container.getPropGetter(property).name, propertyType,
                     )

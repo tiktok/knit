@@ -59,6 +59,17 @@ annotation class KnitViewModel(
     vararg val parents: KClass<*>,
 )
 
+/**
+ * Sometimes, you may don't want to let knit inject into this field.
+ *
+ * e.g. Knit will treat the ViewModel should be injected if it is delegated by ViewModel delegation method
+ * and the ViewModel class is annotated with [KnitViewModel], but maybe you already initialized it from
+ * other callsites, so this injection can be ignored if needed by using [IgnoreInjection] annotation
+ */
+@Target(AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.BINARY)
+annotation class IgnoreInjection
+
 // collection provides start
 /**
  * **Note:** using List does not guarantee order, it just allows repeating elements

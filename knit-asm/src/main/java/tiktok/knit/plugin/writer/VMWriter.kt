@@ -14,6 +14,7 @@ import org.objectweb.asm.tree.MethodNode
 import tiktok.knit.plugin.KnitContext
 import tiktok.knit.plugin.aconstNull
 import tiktok.knit.plugin.aload
+import tiktok.knit.plugin.annotated
 import tiktok.knit.plugin.areturn
 import tiktok.knit.plugin.asMetadataContainer
 import tiktok.knit.plugin.astore
@@ -24,6 +25,7 @@ import tiktok.knit.plugin.element.ProvidesMethod
 import tiktok.knit.plugin.element.toIdMapper
 import tiktok.knit.plugin.exactSingleInjection
 import tiktok.knit.plugin.function0Desc
+import tiktok.knit.plugin.ignoreInjectionDesc
 import tiktok.knit.plugin.illegalState
 import tiktok.knit.plugin.injection.CPF
 import tiktok.knit.plugin.injection.FindInjectionContext
@@ -160,7 +162,9 @@ fun getVMProperties(
     val factoryContext = InjectionFactoryContext(context.inheritJudgement)
     val metadata = classNode.asMetadataContainer() ?: return emptyList()
     val properties = metadata.properties.filter {
-        it.isDelegated
+        val annotations = metadata.getPropertyAnnotations(it)
+        val ignored = annotations.annotated(ignoreInjectionDesc)
+        !ignored && it.isDelegated
     }
 
     val vmProviders = context.globalInjectionContainer.vmProviders
