@@ -65,7 +65,9 @@ private fun knitClassLoader(clazz: Class<*>): DelegateClassLoader? {
         .filter { it.annotations.any { anno -> anno is KnitMock } }
         .map { it.kotlin }.toSet().toTypedArray()
     if (allChildren.isEmpty()) return null
+    val lib = Class.forName("knit.LibKt")
     return readContainers(
+        lib.kotlin,
         clazz.kotlin,
         GlobalProvides::class,
         Option::class,

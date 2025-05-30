@@ -50,10 +50,11 @@ data class KnitType(
         ) return false
 
         // type parameter
-        if (!classifier.isTypeParameter()) {
+        val isTypeParameter = classifier.isTypeParameter()
+        if (!isTypeParameter) {
             val thisDesc = classifier.desc
             val neededDesc = neededType.classifier.desc
-            if (classifier.desc != neededType.classifier.desc) {
+            if (classifier.desc != neededDesc) {
                 // basic type judgement
                 val basicTypeIndex = basicTypes.indexOf(neededDesc)
                 if (basicTypeIndex != -1) {
@@ -71,7 +72,7 @@ data class KnitType(
 
         // then we will judge the type params
         val neededTypeParams = neededType.typeParams
-        if (neededTypeParams.size != typeParams.size) return false
+        if (!isTypeParameter && neededTypeParams.size != typeParams.size) return false
         for (paramIndex in typeParams.indices) {
             val originParam = typeParams[paramIndex]
             val requiredParam = neededTypeParams[paramIndex]

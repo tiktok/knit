@@ -89,6 +89,12 @@ private fun knitStubImplementationError(thisRef: Any?, property: KProperty<*>) =
 
 typealias Factory<R> = () -> R
 
+/** provide something as [kotlin.Lazy] using [Factory] */
+@Provides
+@PublishedApi
+@Suppress("unused")
+internal fun <T> provideLazy(provider: Factory<T>): Lazy<T> = lazy(provider)
+
 /**
  * optional injected value.
  *
