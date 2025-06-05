@@ -33,7 +33,7 @@ fun InsnList.writeFactoryLambda(
 
     // lambda generated for invoke dynamic
     val lambdaGeneratedFunctionType = Type.getMethodType(requiredType, thisType)
-    val lambdaGeneratedFunctionName = "knitL_${getterNode.name}${getterContext.lambdaIndex++}"
+    val lambdaGeneratedFunctionName = "knit_${getterNode.name}_L${getterContext.newLambdaIndex()}"
     val lambdaGeneratedFunction = MethodNode(
         LAMBDA_GEN_ACCESS, lambdaGeneratedFunctionName, lambdaGeneratedFunctionType.descriptor,
         null, emptyArray(),

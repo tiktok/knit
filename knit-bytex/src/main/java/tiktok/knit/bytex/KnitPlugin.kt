@@ -21,7 +21,7 @@ class KnitPlugin : SimplePlugin<KnitPlugin.Extension, KnitContextImpl>() {
         }
 
     open class Extension : BaseExtension() {
-        var needDump = false
+        var needDump = true
         override fun getName(): String = "Knit"
     }
 

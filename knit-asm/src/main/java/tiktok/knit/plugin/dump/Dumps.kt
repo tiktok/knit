@@ -53,6 +53,8 @@ data class ComponentDump(
             val providers = origin.provides.map { ProviderDump.dump(it) }
             return ComponentDump(parent.orNull(), composite.orNull(), injections?.orNull(), providers.orNull())
         }
+
+        val default = ComponentDump(null, null, null, null)
     }
 }
 
@@ -61,11 +63,11 @@ typealias InjectionWithOrigin = Pair<BoundComponentClass, Injection>
 /**
  * ```json5
  * {
- *   way: "getComposite -> getFoo"
- *   from: "(SELF) getFoo",
- *   params: [
+ *   wayToMethod: "getComposite -> getFoo"
+ *   methodId: "getFoo (SELF)",
+ *   parameters: [
  *     {
- *       from: "(COMPOSITE) getArg1"
+ *       methodId: "getArg1 (COMPOSITE)"
  *     }
  *   ]
  * }
@@ -73,44 +75,45 @@ typealias InjectionWithOrigin = Pair<BoundComponentClass, Injection>
  */
 data class InjectionDump(
     /** @see [ProvidesMethod.identifier] */
-    val from: String,
-    val way: String?,
-    val params: List<InjectionDump>?,
+    val methodId: String,
+    val wayToMethod: String?,
+    val parameters: List<InjectionDump>?,
 ) {
     companion object : CanDump<InjectionWithOrigin, InjectionDump> {
         override fun dump(origin: InjectionWithOrigin): InjectionDump {
             val (component, injection) = origin
             val method = injection.providesMethod
             val identifier = Printer.method(method)
-            val way: String? = if (component.internalName == method.containerClass) null
-            else {
-                val wayPaths = component.findWay(method.containerClass).map { (propAcc, _) ->
-                    propAcc.printable()
-                } + method.functionName
-                wayPaths.joinToString(".").takeIf { it.isNotBlank() }
-            }
+            val way: String? = getWay(component, method)
             val type = injection.from.name
-            val from = "($type) $identifier"
+            val methodId = "$identifier ($type)"
             val requirements =
                 if (injection.providesMethod.staticProvides) injection.requirementInjections
                 else injection.requirementInjections.drop(1)
             val params = requirements.map { dump(component to it) }
-            return InjectionDump(from, way, params.orNull())
+            return InjectionDump(methodId, way, params.orNull())
+        }
+
+        private fun getWay(component: BoundComponentClass, method: ProvidesMethod): String? {
+            if (component.internalName == method.containerClass) return null
+            val componentWay = runCatching { component.findWay(method.containerClass) }.getOrNull() ?: return null
+            val wayPaths = componentWay.map { (propAcc, _) -> propAcc.printable() } + method.functionName
+            return wayPaths.joinToString(".").takeIf { it.isNotBlank() }
         }
     }
 }
 
 data class ProviderDump(
     /** @see [Printer.method] */
-    val desc: String,
+    val provider: String,
     /** @see [Printer.type] */
-    val params: List<String>?,
+    val parameters: List<String>?,
 ) {
     companion object : CanDump<ProvidesMethod, ProviderDump> {
         override fun dump(origin: ProvidesMethod): ProviderDump {
-            val desc = Printer.method(origin)
+            val methodDesc = Printer.method(origin)
             val params = origin.requirements.map { Printer.type(it) }
-            return ProviderDump(desc, params.orNull())
+            return ProviderDump(methodDesc, params.orNull())
         }
     }
 }

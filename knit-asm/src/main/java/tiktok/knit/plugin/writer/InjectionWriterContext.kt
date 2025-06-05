@@ -7,9 +7,9 @@ package tiktok.knit.plugin.writer
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
 import tiktok.knit.plugin.FuncSignature
-import tiktok.knit.plugin.injection.Injection
 import tiktok.knit.plugin.element.BoundComponentClass
 import tiktok.knit.plugin.element.KnitSingleton
+import tiktok.knit.plugin.injection.Injection
 
 /**
  * Created by yuejunyu on 2023/9/4
@@ -21,6 +21,12 @@ data class InjectionWriterContext(
     val injection: Injection,
     val getterNode: MethodNode,
     val singletonMap: Map<FuncSignature, KnitSingleton>,
+    val lambdaIndex: LambdaIndex = LambdaIndex(0),
 ) {
-    var lambdaIndex = 0
+
+    fun newLambdaIndex(): Int {
+        return lambdaIndex.lambdaIndex++
+    }
+
+    class LambdaIndex(var lambdaIndex: Int)
 }

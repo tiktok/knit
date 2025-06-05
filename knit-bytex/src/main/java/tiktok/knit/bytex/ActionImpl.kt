@@ -23,6 +23,7 @@ import java.io.File
 class ActionImpl(private val knit: KnitContextImpl) : IAction {
     private val collectInfo = CollectInfo(knit)
     private val writer by lazy { ComponentWriter(knit) }
+    private val dumper by lazy { KnitDumper() }
     private val globalProvidesWriter by lazy { GlobalProvidesWriter(knit) }
 
     override fun init(transformer: TransformEngine) {
@@ -36,10 +37,12 @@ class ActionImpl(private val knit: KnitContextImpl) : IAction {
     override fun traverseRemove(fileData: FileData) {
         val className: InternalName = fileData.relativePath.removeSuffix(".class")
         knit.componentMap.remove(className)
+        dumper.remove(className)
     }
 
     override fun traverseChange(fileData: FileData, classNode: ClassNode) {
         knit.componentMap.remove(classNode.name)
+        dumper.remove(classNode.name)
         collectInfo.collect(classNode)
     }
 
@@ -63,7 +66,7 @@ class ActionImpl(private val knit: KnitContextImpl) : IAction {
     override fun afterTransform(engine: TransformEngine) {
         knit.save()
         if (knit.extension.needDump) {
-            KnitDumper.dumpContext(knit, File(knit.workDir, "knit-dump.json"))
+            dumper.dumpContext(knit, File(knit.workDir, "knit-dump.json"), knit.isIncremental)
         }
     }
 

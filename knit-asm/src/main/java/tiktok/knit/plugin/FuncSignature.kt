@@ -18,7 +18,7 @@ data class FuncSignature(
     val identifier: String by lazy {
         var fullName = name + desc
         fullName = fullName.replace('/', '_')
-        "p" + fullName.filter { it.isJavaIdentifierPart() }
+        "backend_" + fullName.filter { it.isJavaIdentifierPart() }
     }
 
     companion object {

@@ -158,16 +158,8 @@ class KnitContextImpl(
             depsMap[internalName]?.forEach { producer ->
                 allNonIncrementalFiles += "$producer.class"
             }
-            allNonIncrementalFiles += calculateVMRelatedClasses(internalName).map { "$it.class" }
         }
         return allNonIncrementalFiles
-    }
-
-    private fun calculateVMRelatedClasses(changedClass: String): Collection<InternalName> {
-        val componentMap = componentMap
-        return componentMap.filter {
-            changedClass in it.value.injectedVmTypes
-        }.keys
     }
 
     class Storage(

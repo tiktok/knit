@@ -57,9 +57,6 @@ data class ComponentClass(
         emptyMap(), emptyList(), emptyList(), false,
     )
 
-    // Internal names of all vm properties in this component class, used for incremental build
-    val injectedVmTypes = hashSetOf<InternalName>()
-
     companion object {
         fun from(container: MetadataContainer): ComponentClass {
             val classNode = container.node

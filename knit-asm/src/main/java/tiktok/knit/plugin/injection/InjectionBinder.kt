@@ -116,4 +116,4 @@ data class Injection(
     ) : this(type, providesMethod, emptyList(), from)
 }
 
-typealias ComponentInjections = Map<FuncName, Injection>
+typealias ComponentInjections = MutableMap<FuncName, Injection>

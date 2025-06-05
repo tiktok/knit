@@ -78,9 +78,9 @@ object DepsWriter {
             }
             if (method.isConstructor()) {
                 val specialDesc = method.descWithReturnType()
-                invokeStatic(globalProvidesInternalName, method.jvmBytecodeIdentifier(), specialDesc)
+                invokeStatic(globalProvidesInternalName, method.globalBytecodeIdentifier(), specialDesc)
             } else {
-                invokeStatic(globalProvidesInternalName, method.jvmBytecodeIdentifier(), method.desc)
+                invokeStatic(globalProvidesInternalName, method.globalBytecodeIdentifier(), method.desc)
             }
         } else if (method.isMultiBinding()) {
             val requirementInjections = injection.requirementInjections

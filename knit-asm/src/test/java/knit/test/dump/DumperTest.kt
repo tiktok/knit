@@ -13,8 +13,6 @@ import tiktok.knit.plugin.dump.ComponentDump
 import tiktok.knit.plugin.dump.KnitDumper
 import java.io.File
 import kotlin.io.path.createTempDirectory
-import kotlin.reflect.javaType
-import kotlin.reflect.typeOf
 
 /**
  * Created at 2024/4/17
@@ -48,11 +46,10 @@ class DumperTest : KnitTestCase {
         println(dumpFile.path)
         if (!folder.exists()) folder.mkdirs()
         if (dumpFile.exists()) dumpFile.delete()
-        KnitDumper.dumpContext(knitContext, dumpFile)
-        val origin = knitContext.boundComponentMap.values.map { ComponentDump.dump(it) }
+        KnitDumper().dumpContext(knitContext, dumpFile)
+        val origin = knitContext.boundComponentMap.mapValues { ComponentDump.dump(it.value) }
         val classDump = dumpFile.bufferedReader().use {
-            @OptIn(ExperimentalStdlibApi::class)
-            Gson().fromJson<List<ComponentDump>>(it, typeOf<List<ComponentDump>>().javaType)
+            Gson().fromJson(it, KnitDumper.ComponentDumps::class.java)
         }
         Assertions.assertEquals(origin, classDump)
     }

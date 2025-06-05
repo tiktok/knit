@@ -57,10 +57,10 @@ data class ProvidesMethod(
 
     val identifier: String = "$containerClass $functionName $desc"
 
-    fun jvmBytecodeIdentifier(): String {
+    fun globalBytecodeIdentifier(): String {
         val name = (containerClass + functionName + desc)
             .replace('/', '_')
-        return "p" + name.filter { it.isJavaIdentifierPart() }
+        return "gi_" + name.filter { it.isJavaIdentifierPart() }
     }
 
     fun isConstructor() = functionName == "<init>"

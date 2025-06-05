@@ -56,11 +56,11 @@ class GlobalProvidesWriter(private val context: KnitContext) {
         }
         for ((_, providesMethod) in allMethods) {
             val containerName: InternalName = providesMethod.containerClass
-            var providesMethodId = providesMethod.jvmBytecodeIdentifier()
+            var providesMethodId = providesMethod.globalBytecodeIdentifier()
             // method desc is used for generated function desc
             val methodDesc = if (providesMethod.isConstructorLike()) {
                 val newMethod = providesMethod.copy(functionName = "<init>")
-                providesMethodId = newMethod.jvmBytecodeIdentifier()
+                providesMethodId = newMethod.globalBytecodeIdentifier()
                 newMethod.descWithReturnType()
             } else {
                 providesMethod.desc
