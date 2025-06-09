@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace "tiktok.knit.app"
+    namespace "tiktok.knit.sample"
     compileSdk 33
     compileSdkVersion = 33
 

@@ -78,11 +78,17 @@ private class ContentContainer {
         allDirectories: List<File>,
         output: JarOutputStream,
     ): List<ClassAccessor> = sequence {
+        val existedEntries = HashSet<String>()
         allJars.forEach { file ->
             println("handling " + file.absolutePath)
             val jarFile = JarFile(file)
             for (entry in jarFile.entries()) {
                 if (!entry.name.endsWith(".class")) {
+                    if (existedEntries.contains(entry.name)) {
+                        // duplicate entry, choose first one, skip
+                        continue
+                    }
+                    existedEntries.add(entry.name)
                     // direct copy
                     val input = jarFile.getInputStream(entry)
                     val content = input.use { it.readAllBytes() }
