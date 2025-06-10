@@ -202,22 +202,17 @@ class MainPageComponent {
 
 ### ViewModel Injection
 
-Unlike regular constructor injection, ViewModel creation requires a special way and can only be created in specified classes (Activity, Fragment, Assem), so we designed this way:
+Unlike regular constructor injection, ViewModel creation requires a special way and can only be created in specified classes (Activity, Fragment), so we designed this way:
 
 ```kotlin
 class CustomVM @KnitViewModel constructor() : ViewModel()
 
-class CustomAssemVM @KnitViewModel constructor() : AssemViewModel<MyState>()
-
 class MainFragment : Fragment() {
     val customVM: CustomVM by knitViewModel()
-    val customAssenVM: CustomAssemVM by assemViewModel()
 }
 ```
 
 Due to changing the creation method, it is necessary to use `knitViewModel` to create
-
-> For assemViewModel, you can direct access to assemViewModel
 
 ### Multi-Provides
 
@@ -237,7 +232,7 @@ class ChildrenComponent {
 }
 
 class MainPageComponent(
-    val childrenComponent: ChildrenComponent
+    @Component val childrenComponent: ChildrenComponent
 ) {
     val children: Set<Child> by di// [child1, child2]
     val childrenList: List<Child> by di // [child2]
