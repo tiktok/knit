@@ -156,14 +156,14 @@ data class ProvidesMethod(
                 val requirement = requirementParameters[i]
                 val methodArg = methodArgs[i]
                 val requirementType = KnitType
-                    .fromKmType(requirement, methodTypeParamMapper)
+                    .fromKmType(requirement, methodTypeParamMapper, needVerify = true)
                     .adaptBasicType(methodArg)
                 requirements += requirementType
             }
 
             val typeParams = kmFunction.typeParameters
             val typeParameters = typeParams.map {
-                KnitGenericType.fromTypeParam(it, methodTypeParamMapper)
+                KnitGenericType.fromTypeParam(it, methodTypeParamMapper, needVerify = true)
             }
 
             return fromMethodNode(
@@ -255,7 +255,7 @@ data class ProvidesMethod(
             annotationInfo = annotationInfo.copy(providesTypes = providesTypes)
 
             val requirements = kmConstructor.valueParameters.map {
-                KnitType.fromKmType(it.type, idMapper = parentMapper)
+                KnitType.fromKmType(it.type, parentMapper, needVerify = true)
             }
             val isPublic = container.node.isPublic && constructorNode.isPublic
 

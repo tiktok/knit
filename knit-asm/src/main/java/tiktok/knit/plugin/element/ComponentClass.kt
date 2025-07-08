@@ -66,11 +66,11 @@ data class ComponentClass(
             val originTypeParams = container.typeParameters
             val idMapper: TypeParamIdMapper = originTypeParams.toIdMapper()
             val typeParams = originTypeParams.map {
-                KnitGenericType.fromTypeParam(it, idMapper)
+                KnitGenericType.fromTypeParam(it, idMapper, needVerify = false)
             }
             // we regard super type as a special composite(actually it is extends)
             val parents = container.supertypes.map {
-                KnitType.fromKmType(it, idMapper = idMapper)
+                KnitType.fromKmType(it, idMapper, needVerify = false)
             }.map { CompositeComponent(it) }
 
             val allConstructors = container.constructors
@@ -86,7 +86,9 @@ data class ComponentClass(
             val providesInfo = AnnotationReader.getProvidesAnnotationInfo(componentAnnotations)
             var mainProceed = false
             if (componentAnnotations.annotated(providesDesc)) {
-                val classType = KnitType.fromClass(container, classNode)
+                val classType by lazy {
+                    KnitType.fromClass(container, classNode, needVerify = true)
+                }
                 val mainConstructor = container.constructors.firstOrNull {
                     // only process main
                     if (it.isSecondary) return@firstOrNull false
@@ -111,7 +113,7 @@ data class ComponentClass(
                 val isMainConstructor = !constructor.isSecondary
                 // mainProceed, so skip main constructor
                 if (mainProceed && isMainConstructor) continue
-                val classType = KnitType.fromClass(container, classNode)
+                val classType = KnitType.fromClass(container, classNode, needVerify = true)
                 val methodNode = container.getMethodNode(constructor)
                 // not private
                 require(methodNode.isPublic) {
@@ -137,7 +139,9 @@ data class ComponentClass(
 
             for (property in allProperties) {
                 val annotations = container.getPropertyAnnotations(property)
-                val propertyType = KnitType.fromKmType(property.returnType, idMapper = idMapper)
+                val propertyType by lazy {
+                    KnitType.fromKmType(property.returnType, idMapper, needVerify = true)
+                }
                 // read all provides annotations
                 if (annotations.any { it.desc == providesDesc }) {
                     provides += ProvidesMethod.fromPropertyGetter(
@@ -187,12 +191,14 @@ data class ComponentClass(
 
             for (function in allFunctions) {
                 val annotations = container.getFunctionAnnotations(function)
-                val methodMapper = idMapper + function.typeParameters
-                val returnType = KnitType.fromKmType(function.returnType, idMapper = methodMapper)
+                val idMapperForMethod = idMapper + function.typeParameters
+                val returnType by lazy {
+                    KnitType.fromKmType(function.returnType, idMapperForMethod, needVerify = true)
+                }
                 // read all provides annotations
                 if (annotations.any { it.desc == providesDesc }) {
                     provides += ProvidesMethod.fromFunction(
-                        container, function, returnType, methodMapper,
+                        container, function, returnType, idMapperForMethod,
                     )
                 }
                 // read all singleton annotations

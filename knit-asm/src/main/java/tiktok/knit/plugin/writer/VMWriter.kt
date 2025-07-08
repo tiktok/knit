@@ -184,7 +184,7 @@ fun getVMProperties(
 
     val allVMInjections = arrayListOf<VMProperty>()
     for ((vmProp, providers) in requiredVmProviders) {
-        val propType = KnitType.fromKmType(vmProp.returnType, idMapper)
+        val propType = KnitType.fromKmType(vmProp.returnType, idMapper, needVerify = true)
         val propFactoryType = KnitType.from(
             KnitClassifier.from(Factory::class),
             typeParams = listOf(propType.toGeneric()),

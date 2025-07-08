@@ -32,7 +32,7 @@ class MetaDataReadTest : KnitTestCase {
         val classNode = metadataContainer.node
         val kmClass = metadataContainer.kmClassOrNull()
         requireNotNull(kmClass)
-        val type = KnitType.fromClass(metadataContainer, classNode)
+        val type = KnitType.fromClass(metadataContainer, classNode, needVerify = true)
         val charSequenceClassifier = KnitClassifier.from(CharSequence::class)
         assertEquals("custom name!", type.named)
         assertEquals(charSequenceClassifier, type.typeParams[0].bounds[0].classifier)

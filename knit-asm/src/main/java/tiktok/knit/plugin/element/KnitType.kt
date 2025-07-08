@@ -152,19 +152,20 @@ data class KnitType(
         }
 
         fun fromClass(
-            container: MetadataContainer, classNode: ClassNode,
+            container: MetadataContainer, classNode: ClassNode, needVerify: Boolean,
         ): KnitType {
             val classifier = KnitClassifier.from(container.name)
             val named = getNamedFromAnnotationNodes(classNode.allAnnotations).orEmpty()
             val idMapper = container.typeParameters.toIdMapper()
             val typeParams = container.typeParameters.map {
-                KnitGenericType.fromTypeParam(it, idMapper)
+                KnitGenericType.fromTypeParam(it, idMapper, needVerify)
             }
             return from(classifier, false, named, typeParams)
         }
 
         fun fromKmType(
-            kmType: KmType, idMapper: TypeParamIdMapper, named: String = "",
+            kmType: KmType, idMapper: TypeParamIdMapper,
+            needVerify: Boolean, named: String = "",
         ): KnitType {
             val classifier = kmType.classifier
             val arguments = kmType.arguments
@@ -174,7 +175,7 @@ data class KnitType(
             }
             val originType = KnitClassifier.from(classifier)
             val typeParams = arguments.map {
-                KnitGenericType.fromTypeProjection(it, idMapper)
+                KnitGenericType.fromTypeProjection(it, idMapper, needVerify)
             }
             val nullable = kmType.isNullable
             return from(originType, nullable, namedName, typeParams)

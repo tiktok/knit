@@ -51,8 +51,10 @@ class KnitTypeTest : KnitTestCase {
         fun providesNullable(): String? = null
     }
 
-    @Component
     class TPContainer<T : List<T>>(d: T) : List<T> by d
+
+    @Provides
+    class TPContainerFailed<T : List<T>>(d: T) : List<T> by d
 
     @Test
     fun `test named km type`() {
@@ -171,9 +173,10 @@ class KnitTypeTest : KnitTestCase {
 
     @Test
     fun `test failed when type parameter contains recursive bounds`() {
-        val (tpContainer) = readContainer<TPContainer<*>>()
+        val (tpContainer, tpContainerFailed) = readContainers2<TPContainer<*>, TPContainerFailed<*>>()
+        tpContainer.toComponent()
         val e = assertThrows<IllegalArgumentException> {
-            tpContainer.toComponent()
+            tpContainerFailed.toComponent()
         }
         Assertions.assertEquals(
             "type parameter <T>(id:0) contains recursive bounds: (kotlin/collections/List<0>)",

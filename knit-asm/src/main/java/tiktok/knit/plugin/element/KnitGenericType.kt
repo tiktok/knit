@@ -78,6 +78,7 @@ data class KnitGenericType(
         fun fromTypeProjection(
             kmTypeProjection: KmTypeProjection,
             idMapper: TypeParamIdMapper,
+            needVerify: Boolean,
         ): KnitGenericType {
             val originVariance = kmTypeProjection.variance
             val originType = kmTypeProjection.type
@@ -89,26 +90,27 @@ data class KnitGenericType(
             var bounds: List<KnitType>? = null
             if (classifier != null) {
                 val typeParameter = idMapper(classifier.id)
-                validateTypeParameter(typeParameter)
+                val needBounds = validTypeParameter(typeParameter, needVerify)
                 val upperBounds = typeParameter.upperBounds
-                bounds = upperBounds.map { KnitType.fromKmType(it, idMapper = idMapper) }
+                bounds = if (needBounds) upperBounds.map { KnitType.fromKmType(it, idMapper, needVerify) } else null
             }
             // no need named for generic, it only can infer through annotation
-            val type = KnitType.fromKmType(originType, idMapper = idMapper).forceWrapped()
+            val type = KnitType.fromKmType(originType, idMapper, needVerify).forceWrapped()
             return fromKm(type, originVariance, bounds ?: emptyList())
         }
 
         fun fromTypeParam(
             kmTypeParameter: KmTypeParameter,
             idMapper: TypeParamIdMapper,
+            needVerify: Boolean,
         ): KnitGenericType {
-            validateTypeParameter(kmTypeParameter)
+            val needBounds = validTypeParameter(kmTypeParameter, needVerify)
             val classifier = KnitClassifier.from(kmTypeParameter.id)
             val named = KnitType.getNamedFromAnnotations(kmTypeParameter.annotations).orEmpty()
             val type = KnitType.from(classifier, false, named).forceWrapped()
-            val bounds = kmTypeParameter.upperBounds.map {
-                KnitType.fromKmType(it, idMapper = idMapper)
-            }
+            val bounds = if (needBounds) kmTypeParameter.upperBounds.map {
+                KnitType.fromKmType(it, idMapper, needVerify)
+            } else emptyList()
             return fromKm(type, kmTypeParameter.variance, bounds)
         }
 
@@ -123,15 +125,17 @@ data class KnitGenericType(
             return KnitGenericType(internalVariance, type, bounds)
         }
 
-        private fun validateTypeParameter(kmTypeParameter: KmTypeParameter) {
+        private fun validTypeParameter(kmTypeParameter: KmTypeParameter, needVerify: Boolean): Boolean {
             val upperBounds = kmTypeParameter.upperBounds
-            val validate = upperBounds.all { it.validateTypeForParameter(kmTypeParameter.id) }
-            require(validate) {
+            val valid = upperBounds.all { it.validateTypeForParameter(kmTypeParameter.id) }
+            if (valid) return true
+            if (needVerify) require(false) {
                 val boundsString = kmTypeParameter.upperBounds
                     .joinToString(prefix = "(", postfix = ")") { it.asString() }
                 "type parameter <${kmTypeParameter.name}>(id:${kmTypeParameter.id}) contains " +
                     "recursive bounds: $boundsString"
             }
+            return false
         }
 
         private fun KmType.validateTypeForParameter(id: Int): Boolean {
