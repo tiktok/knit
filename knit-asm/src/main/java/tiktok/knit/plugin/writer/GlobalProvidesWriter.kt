@@ -15,6 +15,7 @@ import org.objectweb.asm.tree.TryCatchBlockNode
 import tiktok.knit.plugin.InternalName
 import tiktok.knit.plugin.KnitContext
 import tiktok.knit.plugin.aload
+import tiktok.knit.plugin.appendFrameWithType
 import tiktok.knit.plugin.areturn
 import tiktok.knit.plugin.astore
 import tiktok.knit.plugin.athrow
@@ -33,6 +34,7 @@ import tiktok.knit.plugin.monitorIn
 import tiktok.knit.plugin.monitorOut
 import tiktok.knit.plugin.new
 import tiktok.knit.plugin.putStatic
+import tiktok.knit.plugin.sameFrame
 import tiktok.knit.plugin.typedLoad
 import tiktok.knit.plugin.unaryPlus
 
@@ -140,14 +142,14 @@ class GlobalProvidesWriter(private val context: KnitContext) {
             // if backing field non-null
             ifNotNull(endLabel)
 
+            val handlerNode = LabelNode()
             if (singleton.threadSafe) {
                 val tryStartNode = LabelNode()
                 val tryEndNode = LabelNode()
-                val finallyNode = LabelNode()
 
                 methodNode.tryCatchBlocks = listOf(
                     TryCatchBlockNode(
-                        tryStartNode, tryEndNode, finallyNode, null,
+                        tryStartNode, tryEndNode, handlerNode, null,
                     ),
                 )
 
@@ -167,15 +169,9 @@ class GlobalProvidesWriter(private val context: KnitContext) {
                 +tryEndNode // } catch
                 jmp(endLabel)
 
-                +finallyNode // catch {
-                astore(argCount + 1)
-                ldc(lockType)
-                monitorOut()
-                aload(argCount + 1)
-                athrow()
-
                 // backing field non-null, synchronized end
                 +innerIfLabel
+                appendFrameWithType(providesMethod.actualType.internalName)
                 ldc(lockType)
                 monitorOut()
             } else {
@@ -184,8 +180,18 @@ class GlobalProvidesWriter(private val context: KnitContext) {
 
             // return <non-null> value
             +endLabel
+            sameFrame()
             aload(argCount)
             areturn()
+
+            if (singleton.threadSafe) {
+                +handlerNode // catch {
+                astore(argCount + 1)
+                ldc(lockType)
+                monitorOut()
+                aload(argCount + 1)
+                athrow()
+            }
         }
     }
 

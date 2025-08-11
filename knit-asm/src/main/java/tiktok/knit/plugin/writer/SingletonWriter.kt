@@ -17,6 +17,7 @@ import tiktok.knit.plugin.FuncSignature
 import tiktok.knit.plugin.InternalName
 import tiktok.knit.plugin.allAnnotations
 import tiktok.knit.plugin.aload
+import tiktok.knit.plugin.appendFrameWithType
 import tiktok.knit.plugin.areturn
 import tiktok.knit.plugin.astore
 import tiktok.knit.plugin.athrow
@@ -30,6 +31,8 @@ import tiktok.knit.plugin.jmp
 import tiktok.knit.plugin.monitorIn
 import tiktok.knit.plugin.monitorOut
 import tiktok.knit.plugin.putField
+import tiktok.knit.plugin.sameFrame
+import tiktok.knit.plugin.sameFrame1Throwable
 import tiktok.knit.plugin.typedReturn
 import tiktok.knit.plugin.unaryPlus
 import tiktok.knit.plugin.unbox
@@ -118,14 +121,14 @@ fun InsnList.writeSingletonAndReturn(
 
     val tryCatchNodes = mutableListOf<TryCatchBlockNode>()
 
+    val handlerNode = LabelNode()
     if (threadSafe) {
         val tryStartNode = LabelNode()
         val tryEndNode = LabelNode()
         val innerIfLabel = LabelNode()
-        val finallyNode = LabelNode()
 
         tryCatchNodes += TryCatchBlockNode(
-            tryStartNode, tryEndNode, finallyNode, null,
+            tryStartNode, tryEndNode, handlerNode, null,
         )
 
         // synchronized(this) {
@@ -143,15 +146,10 @@ fun InsnList.writeSingletonAndReturn(
         +tryEndNode
         jmp(returnLabel)
 
-        +finallyNode
-        astore(localPropId + 1)
-        aload(0)
-        monitorOut()
-        aload(localPropId + 1)
-        athrow()
-
         // backing field non-null, synchronized end
         +innerIfLabel
+        // FRAME: add temp var
+        appendFrameWithType(Type.getType(propTypeDesc).internalName)
         aload(0)
         monitorOut()
     } else {
@@ -159,12 +157,23 @@ fun InsnList.writeSingletonAndReturn(
     }
 
     +returnLabel
+    sameFrame()
     aload(localPropId)
     if (unboxId == -1) areturn() else {
         unbox(unboxId)
         typedReturn(unboxId)
     }
 
+    if (threadSafe) {
+        // error handle for synchronized
+        +handlerNode
+        sameFrame1Throwable()
+        astore(localPropId + 1)
+        aload(0)
+        monitorOut()
+        aload(localPropId + 1)
+        athrow()
+    }
     return tryCatchNodes
 }
 

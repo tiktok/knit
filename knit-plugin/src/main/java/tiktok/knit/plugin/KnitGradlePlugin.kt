@@ -4,22 +4,15 @@
 
 package tiktok.knit.plugin
 
-import com.android.build.api.artifact.ScopedArtifact
-import com.android.build.api.variant.ApplicationAndroidComponentsExtension
-import com.android.build.api.variant.ScopedArtifacts
-import com.android.build.gradle.BaseExtension
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.Directory
-import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.tasks.Jar
+import tiktok.knit.plugin.android.KnitAndroidConfig
 import java.io.File
 
 /**
@@ -28,33 +21,9 @@ import java.io.File
  */
 abstract class KnitGradlePlugin : Plugin<Project> {
     override fun apply(target: Project) {
-        if (target.tryConfigAndroid()) return
+        if (KnitAndroidConfig.tryConfigAndroid(target)) return
         if (target.tryConfigJvm()) return
         System.err.println("cannot found any knit target available.")
-    }
-
-    private fun Project.tryConfigAndroid(): Boolean {
-        plugins.findPlugin("com.android.application") ?: return false
-        extensions.configure(
-            ApplicationAndroidComponentsExtension::class.java,
-        ) {
-            it.onVariants { variant ->
-                val transformTask = tasks.register(
-                    "transformKnitFor${variant.name.replaceFirstChar(Char::uppercaseChar)}",
-                    AndroidTask::class.java,
-                )
-                variant.artifacts
-                    .forScope(ScopedArtifacts.Scope.ALL)
-                    .use(transformTask)
-                    .toTransform(
-                        ScopedArtifact.CLASSES,
-                        AndroidTask::allJars,
-                        AndroidTask::allDirectories,
-                        AndroidTask::output,
-                    )
-            }
-        }
-        return true
     }
 
     private fun Project.tryConfigJvm(): Boolean {
@@ -68,33 +37,13 @@ abstract class KnitGradlePlugin : Plugin<Project> {
             val newName = "${originJarTask.name}WithKnit"
             val jvmTask = tasks.register(newName, JvmTask::class.java)
             jvmTask.configure {
+                it.group = GROUP
                 it.dependsOn(originJarTask)
                 it.originJar.set(originJarTask.archiveFile)
                 it.output.set(newOutputFile)
             }
         }
         return true
-    }
-
-    abstract class AndroidTask : DefaultTask() {
-        @get:InputFiles
-        abstract val allJars: ListProperty<RegularFile>
-
-        @get:InputFiles
-        abstract val allDirectories: ListProperty<Directory>
-
-        @get:OutputFile
-        abstract val output: RegularFileProperty
-
-        @TaskAction
-        fun taskAction() {
-            val androidJarFile = findAndroidJar(project)
-            val allJars = allJars.get().map { it.asFile } + androidJarFile
-            val allDirs = allDirectories.get().map { it.asFile }
-            val outputJarFile = output.get().asFile
-            val knitTask = KnitTask(allJars, allDirs, outputJarFile, false)
-            knitTask.execute()
-        }
     }
 
     abstract class JvmTask : DefaultTask() {
@@ -112,19 +61,8 @@ abstract class KnitGradlePlugin : Plugin<Project> {
             knitTask.execute()
         }
     }
-}
 
-private fun findAndroidJar(project: Project): File {
-    val androidExtension = project.extensions.findByType(BaseExtension::class.java)
-    val compileSdkVersion = androidExtension?.compileSdkVersion
-    val sdkDirectory = androidExtension?.sdkDirectory
-    if (compileSdkVersion == null || sdkDirectory == null) {
-        throw IllegalArgumentException("please ensure you have config the compileSdkVersion.")
+    companion object {
+        const val GROUP = "knit"
     }
-    val jarFile = File("$sdkDirectory/platforms/$compileSdkVersion/android.jar")
-    if (!jarFile.exists()) {
-        throw IllegalArgumentException("cannot find android.jar which should be ${jarFile.absolutePath}.")
-    }
-    return jarFile
 }
-

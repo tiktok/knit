@@ -12,6 +12,7 @@ import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.FieldInsnNode
+import org.objectweb.asm.tree.FrameNode
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.InsnNode
 import org.objectweb.asm.tree.IntInsnNode
@@ -86,6 +87,17 @@ fun InsnList.ifNull(
 fun InsnList.jmp(
     skipTo: LabelNode
 ) = +JumpInsnNode(Opcodes.GOTO, skipTo)
+
+fun InsnList.sameFrame() =
+    +FrameNode(Opcodes.F_SAME, 0, null, 0, null)
+
+fun InsnList.sameFrame1Throwable() = sameFrame1("java/lang/Throwable")
+
+fun InsnList.sameFrame1(v: InternalName) =
+    +FrameNode(Opcodes.F_SAME1, 0, null, 1, arrayOf(v))
+
+fun InsnList.appendFrameWithType(v: InternalName) =
+    +FrameNode(Opcodes.F_APPEND, 1, arrayOf(v), 0, null)
 
 fun InsnList.new(
     classDesc: InternalName
