@@ -6,6 +6,7 @@ package tiktok.knit.plugin
 
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
+import tiktok.knit.plugin.dump.KnitDumper
 import tiktok.knit.plugin.element.BoundComponentClass
 import tiktok.knit.plugin.element.BoundComponentMapping
 import tiktok.knit.plugin.element.ComponentClass
@@ -19,6 +20,7 @@ import tiktok.knit.plugin.injection.InjectionBinder
 import tiktok.knit.plugin.injection.InjectionFactoryContext
 import tiktok.knit.plugin.writer.ComponentWriter
 import tiktok.knit.plugin.writer.GlobalProvidesWriter
+import java.io.File
 
 /**
  * Created by yuejunyu on 2025/4/15
@@ -26,6 +28,7 @@ import tiktok.knit.plugin.writer.GlobalProvidesWriter
  */
 class KnitPipeline(
     private val useJrt: Boolean,
+    private val dumpOutputFile: File,
 ) {
     private class KnitContextImpl : KnitContext {
         override val componentMap: MutableMap<InternalName, ComponentClass> = mutableMapOf()
@@ -131,5 +134,9 @@ class KnitPipeline(
         return map {
             it.attach2BoundMapping(mapping, map)
         }
+    }
+
+    fun finish() {
+        KnitDumper().dumpContext(knitContextImpl, dumpOutputFile)
     }
 }

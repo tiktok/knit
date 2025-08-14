@@ -25,13 +25,14 @@ class KnitTask(
     private val dirInputs: List<File>,
     private val outputJar: File,
     private val useJrt: Boolean,
+    private val dumpOutput: File,
 ) {
     fun execute() {
         val jarOutput = JarOutputStream(
             BufferedOutputStream(FileOutputStream(outputJar)),
         )
         val graphPipeline = GraphPipeline()
-        val knitPipeline = KnitPipeline(useJrt)
+        val knitPipeline = KnitPipeline(useJrt, dumpOutput)
 
         val container = ContentContainer()
         val allClasses = container.getAllClasses(jarInputs, dirInputs, jarOutput)
@@ -52,6 +53,8 @@ class KnitTask(
             jarOutput.write(classWriter.toByteArray())
             jarOutput.closeEntry()
         }
+
+        knitPipeline.finish()
 
         container.closeAll()
         jarOutput.close()

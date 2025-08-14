@@ -35,6 +35,7 @@ import tiktok.knit.plugin.monitorOut
 import tiktok.knit.plugin.new
 import tiktok.knit.plugin.putStatic
 import tiktok.knit.plugin.sameFrame
+import tiktok.knit.plugin.sameFrame1Throwable
 import tiktok.knit.plugin.typedLoad
 import tiktok.knit.plugin.unaryPlus
 
@@ -186,6 +187,7 @@ class GlobalProvidesWriter(private val context: KnitContext) {
 
             if (singleton.threadSafe) {
                 +handlerNode // catch {
+                sameFrame1Throwable()
                 astore(argCount + 1)
                 ldc(lockType)
                 monitorOut()

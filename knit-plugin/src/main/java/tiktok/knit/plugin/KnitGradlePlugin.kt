@@ -21,6 +21,8 @@ import java.io.File
  */
 abstract class KnitGradlePlugin : Plugin<Project> {
     override fun apply(target: Project) {
+        val extension = target.extensions.create("KnitExtension", KnitExtension::class.java)
+        extension.dependencyTreeOutputPath.convention("build/knit/dependency-tree.json")
         if (KnitAndroidConfig.tryConfigAndroid(target)) return
         if (target.tryConfigJvm()) return
         System.err.println("cannot found any knit target available.")
@@ -28,7 +30,7 @@ abstract class KnitGradlePlugin : Plugin<Project> {
 
     private fun Project.tryConfigJvm(): Boolean {
         val jarTasks = tasks.withType(Jar::class.java)
-        if (jarTasks.isNullOrEmpty()) return false
+        if (jarTasks.isEmpty()) return false
         for (originJarTask in jarTasks) {
             val originOutput = originJarTask.archiveFile
             val originOutputFile = originOutput.get().asFile
@@ -55,9 +57,15 @@ abstract class KnitGradlePlugin : Plugin<Project> {
 
         @TaskAction
         fun taskAction() {
+            val dumpOutputFile = project.file(
+                project.extensions.getByType(KnitExtension::class.java).dependencyTreeOutputPath,
+            )
             val allJars = listOf(originJar.get().asFile)
             val outputJarFile = output.get().asFile
-            val knitTask = KnitTask(allJars, emptyList(), outputJarFile, true)
+            val knitTask = KnitTask(
+                allJars, emptyList(), outputJarFile, true,
+                dumpOutput = dumpOutputFile,
+            )
             knitTask.execute()
         }
     }

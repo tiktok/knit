@@ -13,6 +13,7 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import tiktok.knit.plugin.KnitExtension
 import tiktok.knit.plugin.KnitTask
 import java.io.File
 
@@ -58,10 +59,13 @@ internal object KnitAndroidConfig {
         @TaskAction
         fun taskAction() {
             val androidJarFile = findAndroidJar(project)
+            val dumpOutputFile = project.file(
+                project.extensions.getByType(KnitExtension::class.java).dependencyTreeOutputPath,
+            )
             val allJars = allJars.get().map { it.asFile } + androidJarFile
             val allDirs = allDirectories.get().map { it.asFile }
             val outputJarFile = output.get().asFile
-            val knitTask = KnitTask(allJars, allDirs, outputJarFile, false)
+            val knitTask = KnitTask(allJars, allDirs, outputJarFile, false, dumpOutputFile)
             knitTask.execute()
         }
     }
