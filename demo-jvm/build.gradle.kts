@@ -1,21 +1,9 @@
-buildscript {
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
-    val remoteKnitVersion: String by project
-    dependencies {
-        classpath("io.github.tiktok.knit:knit-plugin:$remoteKnitVersion")
-    }
-}
-
 plugins {
     kotlin("jvm")
     id("com.gradleup.shadow") version "8.3.6"
+    id("io.github.tiktok.knit.plugin") version "0.1.5"
     application
 }
-
-apply(plugin = "io.github.tiktok.knit.plugin")
 
 repositories {
     mavenCentral()

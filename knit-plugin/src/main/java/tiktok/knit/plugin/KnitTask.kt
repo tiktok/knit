@@ -48,7 +48,20 @@ class KnitTask(
             val classNode = classAccessor.getNode()
             knitPipeline.transform(classNode)
             jarOutput.putNextEntry(JarEntry(classAccessor.clazzFileName))
-            val classWriter = ClassWriter(ClassWriter.COMPUTE_MAXS)
+            // Recompute frames to ensure valid stack map frames after bytecode injection
+            val classWriter = object : ClassWriter(ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES) {
+                override fun getCommonSuperClass(type1: String, type2: String): String {
+                    if (type1 == type2) return type1
+                    // Fast path for arrays: fall back to Object to keep frames valid
+                    if (type1.startsWith("[") || type2.startsWith("[")) return "java/lang/Object"
+                    val ij = graph.inheritJudgement
+                    return when {
+                        ij.inherit(type1, type2) -> type2
+                        ij.inherit(type2, type1) -> type1
+                        else -> "java/lang/Object"
+                    }
+                }
+            }
             classNode.accept(classWriter)
             jarOutput.write(classWriter.toByteArray())
             jarOutput.closeEntry()

@@ -1,5 +1,6 @@
 pluginManagement {
     repositories {
+    maven { url = uri("${rootDir}/build/artifactLocalPublish") }
         mavenLocal()
         mavenCentral()
         gradlePluginPortal()

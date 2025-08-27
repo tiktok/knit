@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm")
     id("com.gradle.plugin-publish") version "1.1.0"
     id("insidePublish")
+    id("signing")
 }
 
 val projectGitUrl: String by project
@@ -31,4 +32,8 @@ dependencies {
     compileOnly("com.android.tools.build:gradle:$agpVersion")
     implementation(project(":knit-asm"))
     implementation("org.ow2.asm:asm-tree:$asmVersion")
+}
+
+signing {
+    isRequired = false
 }
