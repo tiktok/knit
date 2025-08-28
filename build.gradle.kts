@@ -22,3 +22,11 @@ subprojects {
         google()
     }
 }
+
+// Disable signing tasks for local development/publish to project-local repo
+subprojects {
+    tasks.withType<org.gradle.plugins.signing.Sign>().configureEach {
+        enabled = false
+        onlyIf { false }
+    }
+}
