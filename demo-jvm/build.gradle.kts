@@ -1,6 +1,5 @@
 import tiktok.knit.plugin.KnitExtension
 
-// Removed buildscript block and replaced with plugins DSL
 plugins {
     kotlin("jvm")
     id("com.gradleup.shadow") version "8.3.6"
@@ -8,15 +7,14 @@ plugins {
     id("io.github.tiktok.knit.plugin") version "0.1.5-local"
 }
 
-
-// Log where the knit plugin class was loaded from (helps confirm local vs remote)
+/**
+ * Use this to verify whether the knit plugin being run is local
+ * or the official published version (look for the -local flag)
+ */
 println("KNIT_PLUGIN_FROM=" + tiktok.knit.plugin.KnitGradlePlugin::class.java.protectionDomain.codeSource.location)
-
 
 val knitVersion: String by project
 val junitVersion: String by project
-
-// Removed apply statement as the plugin is now included in the plugins block
 
 repositories {
     maven { url = uri("${rootDir}/build/artifactLocalPublish") }
