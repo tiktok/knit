@@ -6,7 +6,8 @@ package tiktok.knit.plugin
 
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
-import tiktok.knit.plugin.dump.KnitDumper
+import tiktok.knit.plugin.dump.KnitDumper.ComponentDumps
+import tiktok.knit.plugin.dump.ComponentDump
 import tiktok.knit.plugin.element.BoundComponentClass
 import tiktok.knit.plugin.element.BoundComponentMapping
 import tiktok.knit.plugin.element.ComponentClass
@@ -21,6 +22,8 @@ import tiktok.knit.plugin.injection.InjectionFactoryContext
 import tiktok.knit.plugin.writer.ComponentWriter
 import tiktok.knit.plugin.writer.GlobalProvidesWriter
 import java.io.File
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 
 /**
  * Created by yuejunyu on 2025/4/15
@@ -137,6 +140,48 @@ class KnitPipeline(
     }
 
     fun finish() {
-        KnitDumper().dumpContext(knitContextImpl, dumpOutputFile)
+        val dumpStart = System.currentTimeMillis()
+
+        // Build current dump in memory
+        val now = ComponentDumps().apply {
+            for ((name, component) in knitContextImpl.boundComponentMap) {
+                this[name] = kotlin.runCatching { ComponentDump.dump(component) }
+                    .getOrElse { ComponentDump.default }
+            }
+        }
+
+        // Load previous dump if present
+        val gson: Gson = GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create()
+        val prev: ComponentDumps? = dumpOutputFile.takeIf { it.exists() }?.let {
+            kotlin.runCatching { it.bufferedReader().use { r -> gson.fromJson(r, ComponentDumps::class.java) } }
+                .getOrNull()
+        }
+
+        // Write delta log (derived)
+        if (prev != null) {
+            val prevKeys = prev.keys.toSet()
+            val nowKeys = now.keys.toSet()
+            val removed = prevKeys - nowKeys
+            val added = nowKeys - prevKeys
+            val common = prevKeys intersect nowKeys
+            val updated = common.filter { key -> prev[key] != now[key] }
+
+            val deltaLog = File(dumpOutputFile.parentFile, "knit.delta.log")
+            deltaLog.bufferedWriter().use { w ->
+                w.appendLine("Knit incremental delta (derived):")
+                w.appendLine("- removedCount: ${removed.size}")
+                removed.sorted().forEach { w.appendLine("  - REMOVED $it") }
+                w.appendLine("- addedCount: ${added.size}")
+                added.sorted().forEach { w.appendLine("  - ADDED $it") }
+                w.appendLine("- updatedCount: ${updated.size}")
+                updated.sorted().forEach { w.appendLine("  - UPDATED $it") }
+            }
+        }
+
+        // Persist current dump
+        if (!dumpOutputFile.parentFile.exists()) dumpOutputFile.parentFile.mkdirs()
+        dumpOutputFile.bufferedWriter().use { gson.toJson(now, it) }
+        val dumpDuration = System.currentTimeMillis() - dumpStart
+        Logger.i("dump knit info cost: ${dumpDuration}ms")
     }
 }

@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm")
     id("com.gradleup.shadow") version "8.3.6"
     id("application")
-    id("io.github.tiktok.knit.plugin") version "0.1.5-local"
+    id("io.github.tiktok.knit.plugin") version "0.1.5-local.2"
 }
 
 /**

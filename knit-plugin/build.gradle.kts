@@ -31,4 +31,5 @@ dependencies {
     compileOnly("com.android.tools.build:gradle:$agpVersion")
     implementation(project(":knit-asm"))
     implementation("org.ow2.asm:asm-tree:$asmVersion")
+    implementation("com.google.code.gson:gson:2.8.9")
 }

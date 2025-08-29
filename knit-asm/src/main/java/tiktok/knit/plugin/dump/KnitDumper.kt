@@ -18,9 +18,15 @@ import java.io.File
  */
 class KnitDumper {
     private val removedClasses = arrayListOf<String>()
+    private val updatedClasses = arrayListOf<String>()
 
     fun remove(className: InternalName) {
         removedClasses.add(className.fqn)
+    }
+
+    /** Marks a component (by internal name) to be (re)dumped in incremental mode. */
+    fun update(className: InternalName) {
+        updatedClasses.add(className.fqn)
     }
 
     fun dumpContext(context: KnitContext, file: File, incremental: Boolean = false) {
@@ -39,7 +45,24 @@ class KnitDumper {
             dumps.remove(className)
         }
 
-        for ((name, component) in context.boundComponentMap) {
+        // Determine which keys to (re)dump
+        val keysToDump: Collection<InternalName> = if (incremental && updatedClasses.isNotEmpty()) {
+            // Only dump the updated set (already in FQN). Filter to those we still have in memory.
+            updatedClasses.filter { context.boundComponentMap.containsKey(it) }
+        } else {
+            // Full dump of all currently known components
+            context.boundComponentMap.keys
+        }
+
+        // Info log about incremental behavior
+        if (incremental) {
+            Logger.i("KnitDumper incremental: removed=${removedClasses.size}, updated=${if (updatedClasses.isEmpty()) "ALL(${keysToDump.size})" else updatedClasses.size}")
+        } else {
+            Logger.i("KnitDumper full dump: components=${keysToDump.size}")
+        }
+
+        for (name in keysToDump) {
+            val component = context.boundComponentMap[name] ?: continue
             dumps[name] = kotlin.runCatching { ComponentDump.dump(component) }
                 .onFailure { it.printStackTrace() }
                 .onFailure { Logger.e("dump $name failed: ${it.message}", it) }
@@ -50,6 +73,10 @@ class KnitDumper {
         }
         val dumpDuration = System.currentTimeMillis() - dumpStart
         Logger.i("dump knit info cost: ${dumpDuration}ms")
+
+        // clear state for next use within the same build session
+        removedClasses.clear()
+        updatedClasses.clear()
     }
 
     private fun provideGson() : Gson = GsonBuilder()
