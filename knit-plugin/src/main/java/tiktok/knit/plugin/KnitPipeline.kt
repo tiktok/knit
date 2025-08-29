@@ -61,6 +61,7 @@ class KnitPipeline(
     private val collectInfo = CollectInfo(knitContextImpl)
     private val writer by lazy { ComponentWriter(knitContextImpl) }
     private val globalProvidesWriter by lazy { GlobalProvidesWriter(knitContextImpl) }
+    private val bindingErrors: MutableList<String> = mutableListOf()
 
 
     fun traverse(classNode: ClassNode) {
@@ -83,12 +84,21 @@ class KnitPipeline(
 
         val boundComponents: Collection<BoundComponentClass> = boundComponentMap.values
         for (bound in boundComponents) {
-            InjectionBinder.checkComponent(inheritJudgement, bound)
-            val injections = InjectionBinder.buildInjectionsForComponent(
-                bound, context.globalInjectionContainer,
-                InjectionFactoryContext(inheritJudgement),
-            )
-            bound.injections = injections
+            try {
+                InjectionBinder.checkComponent(inheritJudgement, bound)
+                val injections = InjectionBinder.buildInjectionsForComponent(
+                    bound, context.globalInjectionContainer,
+                    InjectionFactoryContext(inheritJudgement),
+                )
+                bound.injections = injections
+            } catch (t: Throwable) {
+                val compName = bound.internalName
+                val msg = "binding failed for $compName: ${t.message ?: t.javaClass.simpleName}"
+                Logger.w(msg, t)
+                bindingErrors += msg
+                // Continue without injections so downstream dump can still proceed
+                bound.injections = hashMapOf()
+            }
         }
 
         val end = System.currentTimeMillis()
@@ -183,5 +193,14 @@ class KnitPipeline(
         dumpOutputFile.bufferedWriter().use { gson.toJson(now, it) }
         val dumpDuration = System.currentTimeMillis() - dumpStart
         Logger.i("dump knit info cost: ${dumpDuration}ms")
+
+        // Write errors log if any binding errors were captured
+        if (bindingErrors.isNotEmpty()) {
+            val errorsLog = File(dumpOutputFile.parentFile, "knit.errors.log")
+            errorsLog.bufferedWriter().use { w ->
+                w.appendLine("Knit binding errors (non-fatal):")
+                bindingErrors.forEach { w.appendLine("- $it") }
+            }
+        }
     }
 }
