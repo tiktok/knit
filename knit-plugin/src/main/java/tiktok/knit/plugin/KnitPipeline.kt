@@ -8,6 +8,8 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 import tiktok.knit.plugin.dump.KnitDumper.ComponentDumps
 import tiktok.knit.plugin.dump.ComponentDump
+import tiktok.knit.plugin.dump.Delta
+import tiktok.knit.plugin.dump.Status
 import tiktok.knit.plugin.element.BoundComponentClass
 import tiktok.knit.plugin.element.BoundComponentMapping
 import tiktok.knit.plugin.element.ComponentClass
@@ -62,6 +64,7 @@ class KnitPipeline(
     private val writer by lazy { ComponentWriter(knitContextImpl) }
     private val globalProvidesWriter by lazy { GlobalProvidesWriter(knitContextImpl) }
     private val bindingErrors: MutableList<String> = mutableListOf()
+    private val errorComponents: MutableSet<InternalName> = linkedSetOf()
 
 
     fun traverse(classNode: ClassNode) {
@@ -96,6 +99,7 @@ class KnitPipeline(
                 val msg = "binding failed for $compName: ${t.message ?: t.javaClass.simpleName}"
                 Logger.w(msg, t)
                 bindingErrors += msg
+                errorComponents += compName
                 // Continue without injections so downstream dump can still proceed
                 bound.injections = hashMapOf()
             }
@@ -152,7 +156,7 @@ class KnitPipeline(
     fun finish() {
         val dumpStart = System.currentTimeMillis()
 
-        // Build current dump in memory
+    // Build current dump in memory
         val now = ComponentDumps().apply {
             for ((name, component) in knitContextImpl.boundComponentMap) {
                 this[name] = kotlin.runCatching { ComponentDump.dump(component) }
@@ -167,15 +171,50 @@ class KnitPipeline(
                 .getOrNull()
         }
 
-        // Write delta log (derived)
-        if (prev != null) {
-            val prevKeys = prev.keys.toSet()
-            val nowKeys = now.keys.toSet()
-            val removed = prevKeys - nowKeys
-            val added = nowKeys - prevKeys
-            val common = prevKeys intersect nowKeys
-            val updated = common.filter { key -> prev[key] != now[key] }
+        // Compute deltas and optimistic views
+        val prevKeys = prev?.keys?.toSet().orEmpty()
+        val nowKeys = now.keys.toSet()
+        val removed = prevKeys - nowKeys
+        val added = nowKeys - prevKeys
+        val common = prevKeys intersect nowKeys
+        val updated = common.filter { key -> prev?.get(key) != now[key] }
 
+        // Per-component delta embedding + status flags
+        for (key in nowKeys) {
+            val cur = now[key] ?: continue
+            val old = prev?.get(key)
+            val parentsAdded = (cur.parent.orEmpty() - old?.parent.orEmpty()).orEmpty()
+            val parentsRemoved = (old?.parent.orEmpty() - cur.parent.orEmpty()).orEmpty()
+            val compositeAdded = (cur.composite?.keys.orEmpty() - old?.composite?.keys.orEmpty()).toList()
+            val compositeRemoved = (old?.composite?.keys.orEmpty() - cur.composite?.keys.orEmpty()).toList()
+            val injAdded = (cur.injections?.keys.orEmpty() - old?.injections?.keys.orEmpty()).toList()
+            val injRemoved = (old?.injections?.keys.orEmpty() - cur.injections?.keys.orEmpty()).toList()
+            val injUpdated = (cur.injections?.keys.orEmpty().intersect(old?.injections?.keys.orEmpty())
+                .filter { k -> old?.injections?.get(k) != cur.injections?.get(k) }).toList()
+            val provAdded = (cur.providers.orEmpty() - old?.providers.orEmpty()).map { it.provider }
+            val provRemoved = (old?.providers.orEmpty() - cur.providers.orEmpty()).map { it.provider }
+
+            val status = Status(
+                error = key in errorComponents,
+                optimistic = errorComponents.isNotEmpty(),
+            )
+            val delta = Delta(
+                parentsAdded = parentsAdded.takeIf { it.isNotEmpty() },
+                parentsRemoved = parentsRemoved.takeIf { it.isNotEmpty() },
+                compositeAdded = compositeAdded.takeIf { it.isNotEmpty() },
+                compositeRemoved = compositeRemoved.takeIf { it.isNotEmpty() },
+                injectionsAddedKeys = injAdded.takeIf { it.isNotEmpty() },
+                injectionsRemovedKeys = injRemoved.takeIf { it.isNotEmpty() },
+                injectionsUpdatedKeys = injUpdated.takeIf { it.isNotEmpty() },
+                providersAdded = provAdded.takeIf { it.isNotEmpty() },
+                providersRemoved = provRemoved.takeIf { it.isNotEmpty() },
+            )
+
+            now[key] = cur.copy(status = status.takeIf { it.error == true || it.optimistic == true }, delta = delta)
+        }
+
+        // Write delta log (derived) and optimistic section
+        run {
             val deltaLog = File(dumpOutputFile.parentFile, "knit.delta.log")
             deltaLog.bufferedWriter().use { w ->
                 w.appendLine("Knit incremental delta (derived):")
@@ -185,12 +224,18 @@ class KnitPipeline(
                 added.sorted().forEach { w.appendLine("  - ADDED $it") }
                 w.appendLine("- updatedCount: ${updated.size}")
                 updated.sorted().forEach { w.appendLine("  - UPDATED $it") }
+                if (errorComponents.isNotEmpty()) {
+                    w.appendLine()
+                    w.appendLine("Optimistic view due to errors:")
+                    w.appendLine("- errorAffectedCount: ${errorComponents.size}")
+                    errorComponents.sorted().forEach { w.appendLine("  - ERROR $it") }
+                }
             }
         }
 
         // Persist current dump
-        if (!dumpOutputFile.parentFile.exists()) dumpOutputFile.parentFile.mkdirs()
-        dumpOutputFile.bufferedWriter().use { gson.toJson(now, it) }
+    if (!dumpOutputFile.parentFile.exists()) dumpOutputFile.parentFile.mkdirs()
+    dumpOutputFile.bufferedWriter().use { gson.toJson(now, it) }
         val dumpDuration = System.currentTimeMillis() - dumpStart
         Logger.i("dump knit info cost: ${dumpDuration}ms")
 

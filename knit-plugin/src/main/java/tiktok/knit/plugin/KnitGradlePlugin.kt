@@ -50,6 +50,8 @@ abstract class KnitGradlePlugin : Plugin<Project> {
         val dumpTask = tasks.register("knitDump", DumpTask::class.java)
         dumpTask.configure {
             it.group = GROUP
+            // Ensure classes are compiled before dumping
+            it.dependsOn(tasks.named("compileKotlin"))
             val ext = extensions.getByType(KnitExtension::class.java)
             it.dumpOutput.set(file(ext.dependencyTreeOutputPath))
         }
