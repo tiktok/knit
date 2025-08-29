@@ -22,3 +22,10 @@ subprojects {
         google()
     }
 }
+
+subprojects {
+    tasks.withType<org.gradle.plugins.signing.Sign>().configureEach {
+        enabled = false
+        onlyIf { false }
+    }
+}
