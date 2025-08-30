@@ -45,6 +45,16 @@ abstract class KnitGradlePlugin : Plugin<Project> {
                 it.output.set(newOutputFile)
             }
         }
+
+        // Standalone dump task: scans compiled classes directly and writes JSON + delta log.
+        val dumpTask = tasks.register("knitDump", DumpTask::class.java)
+        dumpTask.configure {
+            it.group = GROUP
+            // Ensure classes are compiled before dumping
+            it.dependsOn(tasks.named("compileKotlin"))
+            val ext = extensions.getByType(KnitExtension::class.java)
+            it.dumpOutput.set(file(ext.dependencyTreeOutputPath))
+        }
         return true
     }
 
@@ -65,6 +75,29 @@ abstract class KnitGradlePlugin : Plugin<Project> {
             val knitTask = KnitTask(
                 allJars, emptyList(), outputJarFile, true,
                 dumpOutput = dumpOutputFile,
+            )
+            knitTask.execute()
+        }
+    }
+
+    abstract class DumpTask : DefaultTask() {
+        @get:OutputFile
+        abstract val dumpOutput: RegularFileProperty
+
+        @TaskAction
+        fun taskAction() {
+            val project = project
+            // Default to Kotlin main classes directory
+            val classDir = project.layout.buildDirectory.dir("classes/kotlin/main").get().asFile
+            val tmpJar = project.layout.buildDirectory.file("tmp/knitDump/knit-dump.jar").get().asFile
+            tmpJar.parentFile.mkdirs()
+            val dumpFile = dumpOutput.get().asFile
+            val knitTask = KnitTask(
+                jarInputs = emptyList(),
+                dirInputs = listOf(classDir).filter { it.exists() },
+                outputJar = tmpJar,
+                useJrt = true,
+                dumpOutput = dumpFile,
             )
             knitTask.execute()
         }

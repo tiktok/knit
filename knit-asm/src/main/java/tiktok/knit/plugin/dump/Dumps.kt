@@ -38,6 +38,10 @@ data class ComponentDump(
     val composite: Map<String, String>?,
     val injections: Map<String, InjectionDump>?,
     val providers: List<ProviderDump>?,
+    // Optional optimistic/error status metadata
+    val status: Status? = null,
+    // Optional per-component delta metadata
+    val delta: Delta? = null,
 ) {
     companion object : CanDump<BoundComponentClass, ComponentDump> {
         override fun dump(origin: BoundComponentClass): ComponentDump {
@@ -51,12 +55,31 @@ data class ComponentDump(
                 propAcc.printable() to dump
             }?.toMap()
             val providers = origin.provides.map { ProviderDump.dump(it) }
-            return ComponentDump(parent.orNull(), composite.orNull(), injections?.orNull(), providers.orNull())
+            return ComponentDump(parent.orNull(), composite.orNull(), injections?.orNull(), providers.orNull(), null, null)
         }
 
-        val default = ComponentDump(null, null, null, null)
+        val default = ComponentDump(null, null, null, null, null, null)
     }
 }
+
+data class Status(
+    val error: Boolean? = null,
+    val optimistic: Boolean? = null,
+    val added: Boolean? = null,
+    val removed: Boolean? = null,
+)
+
+data class Delta(
+    val parentsAdded: List<String>? = null,
+    val parentsRemoved: List<String>? = null,
+    val compositeAdded: List<String>? = null,
+    val compositeRemoved: List<String>? = null,
+    val injectionsAddedKeys: List<String>? = null,
+    val injectionsRemovedKeys: List<String>? = null,
+    val injectionsUpdatedKeys: List<String>? = null,
+    val providersAdded: List<String>? = null,
+    val providersRemoved: List<String>? = null,
+)
 
 typealias InjectionWithOrigin = Pair<BoundComponentClass, Injection>
 

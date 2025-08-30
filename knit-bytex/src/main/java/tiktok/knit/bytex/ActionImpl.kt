@@ -25,6 +25,8 @@ class ActionImpl(private val knit: KnitContextImpl) : IAction {
     private val writer by lazy { ComponentWriter(knit) }
     private val dumper by lazy { KnitDumper() }
     private val globalProvidesWriter by lazy { GlobalProvidesWriter(knit) }
+    private val removedInternals = linkedSetOf<InternalName>()
+    private val updatedInternals = linkedSetOf<InternalName>()
 
     override fun init(transformer: TransformEngine) {
         knit.recovery()
@@ -32,18 +34,25 @@ class ActionImpl(private val knit: KnitContextImpl) : IAction {
 
     override fun traverseAdd(relativePath: String, classNode: ClassNode) {
         collectInfo.collect(classNode)
+    // Mark added/changed class for incremental dump
+    dumper.update(classNode.name)
+    updatedInternals += classNode.name
     }
 
     override fun traverseRemove(fileData: FileData) {
         val className: InternalName = fileData.relativePath.removeSuffix(".class")
         knit.componentMap.remove(className)
         dumper.remove(className)
+    removedInternals += className
     }
 
     override fun traverseChange(fileData: FileData, classNode: ClassNode) {
         knit.componentMap.remove(classNode.name)
         dumper.remove(classNode.name)
         collectInfo.collect(classNode)
+    // Mark changed class for incremental dump
+    dumper.update(classNode.name)
+    updatedInternals += classNode.name
     }
 
     override fun beforeTransform(engine: TransformEngine) {
@@ -64,8 +73,24 @@ class ActionImpl(private val knit: KnitContextImpl) : IAction {
     }
 
     override fun afterTransform(engine: TransformEngine) {
-        knit.save()
+        val storage = knit.save()
         if (knit.extension.needDump) {
+            // Produce a verification delta log when incremental
+            if (knit.isIncremental) {
+                val deltaLog = File(knit.workDir, "knit.delta.log")
+                // changed files in this run (relativePath) and dependency-expanded set
+                val changed = knit.notIncrementalFiles
+                deltaLog.bufferedWriter().use {
+                    it.appendLine("Knit incremental delta (plan):")
+                    it.appendLine("- changedOrAffectedCount: ${changed.size}")
+                    it.appendLine("- changedOrAffected:")
+                    changed.forEach { f -> it.appendLine("  - $f") }
+                    it.appendLine("- removedCount: ${removedInternals.size}")
+                    removedInternals.forEach { n -> it.appendLine("  - REMOVED ${n}") }
+                    it.appendLine("- updatedCount: ${updatedInternals.size}")
+                    updatedInternals.forEach { n -> it.appendLine("  - UPDATED ${n}") }
+                }
+            }
             dumper.dumpContext(knit, File(knit.workDir, "knit-dump.json"), knit.isIncremental)
         }
     }
