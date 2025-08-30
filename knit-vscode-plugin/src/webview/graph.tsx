@@ -5,20 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import * as d3 from "d3"
 import { createRoot } from "react-dom/client"
 
-export interface Node {
-  name: string
-  is_optimistic: boolean
-  is_source_error: boolean
-  error_message?: string
-  is_in_last_update: boolean
-  has_upstream_error: boolean
-}
-
-export interface AdjacencyList {
-  nodes: Record<string, Node>
-  edges: [string, string][]
-}
-
+import { AdjacencyList } from "./types"
 interface GraphProps {
   data: AdjacencyList
 }
@@ -236,7 +223,7 @@ const Graph: React.FC<GraphProps> = ({ data }) => {
     const hasSelection = selectedNodes.size > 0
 
     nodeRef.current
-      .attr("r", (d: any) => (selectedNodes.has(d.name) ? 16 : 12))
+      .attr("r", (d: KnitNode) => (selectedNodes.has(d.name) ? 16 : 12))
       .attr("opacity", (d: any) => {
         if (!hasSelection) return 1
         return selectedNodes.has(d.name) ? 1 : 0.3
