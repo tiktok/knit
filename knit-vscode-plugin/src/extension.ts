@@ -1,11 +1,14 @@
 import * as vscode from 'vscode';
-import { spawn } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
 import * as os from 'os';
 
 let panel: vscode.WebviewPanel | undefined;
 // Keep track of open diagram panels
 const diagramPanels = new Set<vscode.WebviewPanel>(); 
+// Track background watcher processes so we can stop them
+const watcherProcs = new Set<ChildProcess>();
+let isWatchRunning = false;
 
 export function activate(context: vscode.ExtensionContext) {
   // Hello World command
@@ -18,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Gradle shadowJar watcher
   let watchCmd = vscode.commands.registerCommand("knit.watchJar", () => {
-    const terminal = vscode.window.createOutputChannel("Knit Watch");
+    const out = vscode.window.createOutputChannel("Knit Watch");
     const workspaceFolder = vscode.workspace.workspaceFolders
       ? vscode.workspace.workspaceFolders[0].uri.fsPath
       : undefined;
@@ -28,17 +31,55 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
+    if (isWatchRunning) {
+      out.show(true);
+      vscode.window.showInformationMessage("Knit watchers are already running.");
+      return;
+    }
+
+    out.clear();
+    out.appendLine("Starting Knit watchers: Gradle shadowJar --continuous + npm run watch\n");
+
     const repoRoot = path.resolve(workspaceFolder, "..");
     const gradleCmd = os.platform() === "win32" ? "gradlew.bat" : "./gradlew";
+    const npmCmd = os.platform() === "win32" ? "npm.cmd" : "npm";
+
     const gradle = spawn(gradleCmd, ["shadowJar", "--continuous"], {
       cwd: repoRoot,
       shell: true,
     });
+    const npm = spawn(npmCmd, ["run", "watch"], {
+      cwd: workspaceFolder,
+      shell: true,
+    });
 
-    gradle.stdout.on("data", (data) => terminal.append(data.toString()));
-    gradle.stderr.on("data", (data) => terminal.append(`[ERR] ${data.toString()}`));
-    gradle.on("close", (code) => terminal.appendLine(`Gradle exited with code ${code}`));
-    terminal.show(true);
+    watcherProcs.add(gradle);
+    watcherProcs.add(npm);
+    isWatchRunning = true;
+
+    const tag = (name: string, chunk: any) => `[${name}] ${chunk.toString()}`;
+
+    gradle.stdout.on("data", (d) => out.append(tag("gradle", d)));
+    gradle.stderr.on("data", (d) => out.append(tag("gradle:err", d)));
+    gradle.on("close", (code) => {
+      out.appendLine(`\n[gradle] exited with code ${code}`);
+      watcherProcs.delete(gradle);
+      if (watcherProcs.size === 0) {
+        isWatchRunning = false;
+      }
+    });
+
+    npm.stdout.on("data", (d) => out.append(tag("npm", d)));
+    npm.stderr.on("data", (d) => out.append(tag("npm:err", d)));
+    npm.on("close", (code) => {
+      out.appendLine(`\n[npm] watch exited with code ${code}`);
+      watcherProcs.delete(npm);
+      if (watcherProcs.size === 0) {
+        isWatchRunning = false;
+      }
+    });
+
+    out.show(true);
   });
 
   // Open WebviewPanel command
@@ -106,7 +147,7 @@ function getHtml(context: vscode.ExtensionContext, webview: vscode.Webview): str
     `img-src ${webview.cspSource} https: data:`,
     `style-src ${webview.cspSource} 'unsafe-inline'`,
     `font-src ${webview.cspSource} https:`,
-    `script-src ${webview.cspSource} 'nonce-${nonce}'`,
+    `script-src ${webview.cspSource} https: 'unsafe-inline'`,
     `connect-src ${webview.cspSource}`
   ].join('; ');
 
@@ -126,8 +167,8 @@ function getHtml(context: vscode.ExtensionContext, webview: vscode.Webview): str
   </head>
   <body>
     <div id="app"></div>
-    <script nonce="${nonce}" src="${d3Cdn}"></script>
-    <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
+  <script nonce="${nonce}" src="${d3Cdn}"></script>
+  <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
   </body>
   </html>`;
 }
@@ -141,4 +182,13 @@ function getNonce() {
   return nonce;
 }
 
-export function deactivate() {}
+export function deactivate() {
+  deactivateWatchers();
+}
+export function deactivateWatchers() {
+  watcherProcs.forEach((p) => {
+    try { p.kill(); } catch {}
+  });
+  watcherProcs.clear();
+  isWatchRunning = false;
+}
