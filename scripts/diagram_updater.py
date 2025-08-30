@@ -39,6 +39,9 @@ class DiagramUpdater:
                 component_dumps = json.load(f)
             adjacency_list = self.adjacency_list.build_adjacency_list(component_dumps)
             self.current_adj = adjacency_list
+            # Mark full build as last update for all nodes
+            self.adjacency_list.reset_last_update_flags()
+            self.adjacency_list.mark_full_build_update()
             mermaid_content = self.visualiser.build_mermaid_diagram(adjacency_list, self.direction)
             os.makedirs(os.path.dirname(self.output_file_path), exist_ok=True)
             with open(self.output_file_path, 'w') as f:
@@ -84,6 +87,9 @@ class DiagramUpdater:
         try:
             with open(change_file, 'r') as f:
                 change_data = json.load(f)
+            # Update node status metadata and mark last update flags
+            self.adjacency_list.reset_last_update_flags()
+            self.adjacency_list.apply_status_change(change_data)
             self.current_adj = self.incremental.apply_change(self.current_adj, change_data)
             mermaid_content = self.visualiser.build_mermaid_diagram(self.current_adj, self.direction)
             os.makedirs(os.path.dirname(self.output_file_path), exist_ok=True)
