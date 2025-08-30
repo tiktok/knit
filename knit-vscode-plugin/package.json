@@ -1,7 +1,7 @@
 {
   "name": "knit-vscode-plugin",
-  "displayName": "knit-vscode-plugin",
-  "description": "",
+  "displayName": "Knit VSCode Plugin",
+  "description": "Knit development tools with Gradle watcher and dependency graph panel.",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.103.0"
@@ -10,43 +10,70 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:extension.startKnit"
+    "onCommand:knit.openDiagramPanel",
+    "onCommand:knit.closeDiagramPanel"
   ],
   "main": "./out/extension.js",
-
   "contributes": {
     "commands": [
       {
         "command": "knit-vscode-plugin.helloWorld",
         "title": "Hello World"
       },
-      
       {
         "command": "knit.watchJar",
-      "title": "Knit: Watch and Build ShadowJar"
+        "title": "Knit: Watch and Build ShadowJar"
       }
-    
+    ],
+    "keybindings": [
+      {
+        "command": "knit.openDiagramPanel",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+shift+alt+d"
+      },
+      {
+        "command": "knit.closeDiagramPanel",
+        "key": "ctrl+alt+f",
+        "mac": "cmd+shift+alt+f"
+      }
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run build",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
+
+    "build:ext": "tsc -p ./",
+    "build:webview": "esbuild src/webview/graph.tsx --bundle --outfile=out/webview/graph.js --format=iife --platform=browser --target=es2020 --jsx=automatic",
+    "watch:webview": "esbuild src/webview/graph.tsx --bundle --outfile=out/webview/graph.js --format=iife --platform=browser --target=es2020 --jsx=automatic --watch",
+
+    "build": "npm run build:ext && npm run build:webview",
+    "watch:all": "npm-run-all -p watch watch:webview",
+
+  "compute:adj": "node scripts/computeAdj.mjs",
+
+    "pretest": "npm run build && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test"
   },
-
   "devDependencies": {
-    "@types/vscode": "^1.103.0",
+    "@types/d3": "^7.4.3",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@types/vscode": "^1.103.0",
     "@typescript-eslint/eslint-plugin": "^8.39.0",
     "@typescript-eslint/parser": "^8.39.0",
-    "eslint": "^9.32.0",
-    "typescript": "^5.9.2",
     "@vscode/test-cli": "^0.0.11",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.9",
+    "eslint": "^9.32.0",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "d3": "^7.9.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
   }
-
 }
