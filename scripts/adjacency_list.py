@@ -1,5 +1,5 @@
-import json
 import re
+from typing import Any, Dict, List, Tuple
 
 class Node:
     def __init__(self, classname: str):
@@ -12,7 +12,7 @@ class AdjacencyList:
         self.nodes = {}
         self.edges = []
 
-    def get_number_of_nodes(self, file: json):
+    def get_number_of_nodes(self, file: Dict[str, Any]):
         """Extract nodes and edges from a Knit dependency JSON file."""
         
         number_of_nodes = len(file)
@@ -29,8 +29,15 @@ class AdjacencyList:
         rhs = re.sub(r'<[^<>]*>', '', rhs).strip()
         return rhs.strip('() ')
 
-    def get_nodes_and_edges(self, data: dict):
-        """Extract edges from a Knit dependency JSON object."""
+    def get_nodes_and_edges(self, data: Dict[str, Any]) -> Tuple[Dict[str, str], List[Tuple[str, str]]]:
+        """Extract edges from a Knit dependency JSON object.
+
+        Resets internal state on each invocation to avoid edge duplication across updates.
+        """
+        # Reset state so repeated calls don't accumulate
+        self.nodes = {}
+        self.edges = []
+
         for classname, details in data.items():
             normalized_classname = self.normalize_classname(classname)
             if normalized_classname not in self.nodes:
@@ -43,31 +50,31 @@ class AdjacencyList:
                     normalized_consumer = self.normalize_classname(consumer)
                     self.edges.append((normalized_consumer, normalized_classname))
 
-
         return self.nodes, self.edges
     
-    def build_adjacency_list(self, file: json):
-
-        number_of_nodes = self.get_number_of_nodes(file)
+    def build_adjacency_list(self, file: Dict[str, Any]) -> Dict[str, List[str]]:
+        # Build nodes and edges from the JSON object
+        _ = self.get_number_of_nodes(file)
         nodes, edges = self.get_nodes_and_edges(file)
-        adjacency_list = {}
 
-    # Add vertices to the dictionary
+        adjacency_list: Dict[str, List[str]] = {}
+
+        # Add vertices to the dictionary
         for node in nodes:
             adjacency_list[node] = []
 
         # Add edges to the dictionary
-        for edge in edges:
-            vertex1, vertex2 = edge
+        for vertex1, vertex2 in edges:
             if vertex1 in adjacency_list:
                 adjacency_list[vertex1].append(vertex2)
             else:
                 adjacency_list[vertex1] = [vertex2]
 
-        # Display the adjacency list
-        for vertex, neighbors in adjacency_list.items():
-            print(f"{vertex} -> {' '.join(map(str, neighbors))}")
-        
+        # Dedupe and sort neighbors for determinism
+        for vertex in list(adjacency_list.keys()):
+            if adjacency_list[vertex]:
+                adjacency_list[vertex] = sorted(list(dict.fromkeys(adjacency_list[vertex])))
+
         return adjacency_list
     
     def normalize_classname(self, classname):

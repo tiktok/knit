@@ -1,18 +1,19 @@
-from visualiser import Visualiser
+import unittest
+from scripts.visualiser import Visualiser
 
-# Example adjacency list
-adjacency_list = {
-    "knit.demo.AddCommand": [],
-    "knit.demo.AuditLogger": [],
-    "knit.demo.GitCommand": ["knit.demo.AddCommand"],
-    "knit.demo.AuditLogger": ["knit.demo.AuditLogger"]
-}
 
-# Create an instance of Visualiser
-visualiser = Visualiser()
+class TestVisualiser(unittest.TestCase):
+    def test_mermaid_builds(self):
+        adjacency_list = {
+            "knit.demo.AddCommand": [],
+            "knit.demo.AuditLogger": [],
+            "knit.demo.GitCommand": ["knit.demo.AddCommand"],
+        }
+        visualiser = Visualiser()
+        mermaid_diagram = visualiser.build_mermaid_diagram(adjacency_list, direction="TD")
+        self.assertIn("graph TD", mermaid_diagram)
+        self.assertIn("knit.demo.GitCommand --> knit.demo.AddCommand", mermaid_diagram)
 
-# Build the Mermaid diagram
-mermaid_diagram = visualiser.build_mermaid_diagram(adjacency_list, direction="TD")
 
-# Print the Mermaid diagram
-print(mermaid_diagram)
+if __name__ == "__main__":
+    unittest.main()
