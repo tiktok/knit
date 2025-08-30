@@ -44,10 +44,16 @@ export function activate(context: vscode.ExtensionContext) {
   // Open WebviewPanel command
 let openPanelCmd = vscode.commands.registerCommand("knit.openDiagramPanel", async () => {
   const panel = vscode.window.createWebviewPanel(
-    "mermaidPanel",              // viewType
-    "Knit Dependency Graph",     // title
+    "knitGraphPanel",              // viewType
+    "Knit Dependency Graph",       // title
     vscode.ViewColumn.Two,
-    { enableScripts: true }
+    {
+      enableScripts: true,
+      localResourceRoots: [
+        vscode.Uri.joinPath(context.extensionUri, 'out'),
+        vscode.Uri.joinPath(context.extensionUri, 'resources')
+      ]
+    }
   );
 
   // Add panel to the set
@@ -58,28 +64,18 @@ let openPanelCmd = vscode.commands.registerCommand("knit.openDiagramPanel", asyn
     diagramPanels.delete(panel);
   });
 
-  // Load diagram from file or fallback
-  let diagram = `graph TD\nA[Knit Plugin Activated] --> B[Panel Ready]\nB --> C[Edit .mmd to update diagram]`;
-  if (vscode.workspace.workspaceFolders) {
-    const root = vscode.workspace.workspaceFolders[0].uri;
-    const diagramFile = vscode.Uri.joinPath(root, "diagram.mmd");
-    try {
-      const data = await vscode.workspace.fs.readFile(diagramFile);
-      diagram = new TextDecoder("utf-8").decode(data);
-    } catch {}
-  }
-
-  panel.webview.html = getHtml(diagram);
+  // Build html and scripts
+  panel.webview.html = getHtml(context, panel.webview);
 
   // Watch for changes only while this panel is open
   const disposable = vscode.workspace.onDidChangeTextDocument(event => {
-  if (event.document.fileName.endsWith(".mmd")) {
-    const newDiagram = event.document.getText();
-    diagramPanels.forEach(panel => {
-      panel.webview.postMessage({ type: "update", diagram: newDiagram });
-    });
-  }
-});
+    // In future: adapt to your data source changes
+    if (event.document.fileName.endsWith(".mmd") || event.document.fileName.endsWith('.json')) {
+      diagramPanels.forEach(panel => {
+        panel.webview.postMessage({ type: "update" });
+      });
+    }
+  });
 
   panel.onDidDispose(() => disposable.dispose());
 });
@@ -98,43 +94,51 @@ let closePanelCmd = vscode.commands.registerCommand("knit.closeDiagramPanel", ()
 }
 
 // Generate the webview HTML
-function getHtml(diagram: string): string {
-  diagram = diagram.trim();
-  return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-<style>
-  body { padding: 10px; font-family: sans-serif; }
-</style>
-</head>
-<body>
-<div class="mermaid"></div>
-<script>
-mermaid.initialize({ startOnLoad: false });
+function getHtml(context: vscode.ExtensionContext, webview: vscode.Webview): string {
+  const nonce = getNonce();
+  const d3Cdn = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
+  const scriptUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', 'graph.js')
+  );
 
-function renderDiagram(diagram) {
-  const container = document.querySelector('.mermaid');
-  container.innerHTML = diagram;
-  mermaid.init(undefined, container);
+  const csp = [
+    `default-src 'none'`,
+    `img-src ${webview.cspSource} https: data:`,
+    `style-src ${webview.cspSource} 'unsafe-inline'`,
+    `font-src ${webview.cspSource} https:`,
+    `script-src ${webview.cspSource} 'nonce-${nonce}'`,
+    `connect-src ${webview.cspSource}`
+  ].join('; ');
+
+  return `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${csp}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Knit Graph</title>
+    <style>
+      html, body { height: 100%; }
+      body { padding: 0; margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+      #app { height: 100vh; display: flex; flex-direction: column; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script nonce="${nonce}" src="${d3Cdn}"></script>
+    <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
+  </body>
+  </html>`;
 }
 
-// Initial render
-renderDiagram(\`${diagram}\`);
-
-// Listen for updates
-window.addEventListener('message', event => {
-  const msg = event.data;
-  if (msg.type === 'update') {
-    renderDiagram(\`${msg.diagram}\`);
+function getNonce() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let nonce = '';
+  for (let i = 0; i < 32; i++) {
+    nonce += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-});
-</script>
-</body>
-</html>
-`;
+  return nonce;
 }
 
 export function deactivate() {}
