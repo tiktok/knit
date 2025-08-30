@@ -10,9 +10,7 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,
-		"jsx": "react",
-		"jsxFactory": "h",
-		"jsxFragmentFactory": "Fragment"
+		"jsx": "react-jsx"
 	},
 	"exclude": [
 		"src/webview/**/*"

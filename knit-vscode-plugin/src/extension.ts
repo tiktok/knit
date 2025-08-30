@@ -1,155 +1,131 @@
-import * as vscode from 'vscode';
-import { spawn, ChildProcess } from 'child_process';
-import * as path from 'path';
-import * as os from 'os';
+import * as vscode from "vscode"
+import { spawn } from "child_process"
+import * as path from "path"
+import * as os from "os"
 
-let panel: vscode.WebviewPanel | undefined;
+let panel: vscode.WebviewPanel | undefined
 // Keep track of open diagram panels
-const diagramPanels = new Set<vscode.WebviewPanel>(); 
-// Track background watcher processes so we can stop them
-const watcherProcs = new Set<ChildProcess>();
-let isWatchRunning = false;
+const diagramPanels = new Set<vscode.WebviewPanel>()
 
 export function activate(context: vscode.ExtensionContext) {
   // Hello World command
-  let helloCmd = vscode.commands.registerCommand(
-    "knit-vscode-plugin.helloWorld",
-    () => {
-      vscode.window.showInformationMessage("Hello World from Knit!");
-    }
-  );
+  const helloCmd = vscode.commands.registerCommand("knit-vscode-plugin.helloWorld", () => {
+    vscode.window.showInformationMessage("Hello World from Knit!")
+  })
 
   // Gradle shadowJar watcher
-  let watchCmd = vscode.commands.registerCommand("knit.watchJar", () => {
-    const out = vscode.window.createOutputChannel("Knit Watch");
+  const watchCmd = vscode.commands.registerCommand("knit.watchJar", () => {
+    const terminal = vscode.window.createOutputChannel("Knit Watch")
     const workspaceFolder = vscode.workspace.workspaceFolders
       ? vscode.workspace.workspaceFolders[0].uri.fsPath
-      : undefined;
+      : undefined
 
     if (!workspaceFolder) {
-      vscode.window.showErrorMessage("No workspace folder is open!");
-      return;
+      vscode.window.showErrorMessage("No workspace folder is open!")
+      return
     }
 
-    if (isWatchRunning) {
-      out.show(true);
-      vscode.window.showInformationMessage("Knit watchers are already running.");
-      return;
-    }
-
-    out.clear();
-    out.appendLine("Starting Knit watchers: Gradle shadowJar --continuous + npm run watch\n");
-
-    const repoRoot = path.resolve(workspaceFolder, "..");
-    const gradleCmd = os.platform() === "win32" ? "gradlew.bat" : "./gradlew";
-    const npmCmd = os.platform() === "win32" ? "npm.cmd" : "npm";
-
+    const repoRoot = path.resolve(workspaceFolder, "..")
+    const gradleCmd = os.platform() === "win32" ? "gradlew.bat" : "./gradlew"
     const gradle = spawn(gradleCmd, ["shadowJar", "--continuous"], {
       cwd: repoRoot,
       shell: true,
-    });
-    const npm = spawn(npmCmd, ["run", "watch"], {
-      cwd: workspaceFolder,
-      shell: true,
-    });
+    })
 
-    watcherProcs.add(gradle);
-    watcherProcs.add(npm);
-    isWatchRunning = true;
-
-    const tag = (name: string, chunk: any) => `[${name}] ${chunk.toString()}`;
-
-    gradle.stdout.on("data", (d) => out.append(tag("gradle", d)));
-    gradle.stderr.on("data", (d) => out.append(tag("gradle:err", d)));
-    gradle.on("close", (code) => {
-      out.appendLine(`\n[gradle] exited with code ${code}`);
-      watcherProcs.delete(gradle);
-      if (watcherProcs.size === 0) {
-        isWatchRunning = false;
-      }
-    });
-
-    npm.stdout.on("data", (d) => out.append(tag("npm", d)));
-    npm.stderr.on("data", (d) => out.append(tag("npm:err", d)));
-    npm.on("close", (code) => {
-      out.appendLine(`\n[npm] watch exited with code ${code}`);
-      watcherProcs.delete(npm);
-      if (watcherProcs.size === 0) {
-        isWatchRunning = false;
-      }
-    });
-
-    out.show(true);
-  });
+    gradle.stdout.on("data", (data) => terminal.append(data.toString()))
+    gradle.stderr.on("data", (data) => terminal.append(`[ERR] ${data.toString()}`))
+    gradle.on("close", (code) => terminal.appendLine(`Gradle exited with code ${code}`))
+    terminal.show(true)
+  })
 
   // Open WebviewPanel command
-let openPanelCmd = vscode.commands.registerCommand("knit.openDiagramPanel", async () => {
-  const panel = vscode.window.createWebviewPanel(
-    "knitGraphPanel",              // viewType
-    "Knit Dependency Graph",       // title
-    vscode.ViewColumn.Two,
-    {
-      enableScripts: true,
-      localResourceRoots: [
-        vscode.Uri.joinPath(context.extensionUri, 'out'),
-        vscode.Uri.joinPath(context.extensionUri, 'resources')
-      ]
-    }
-  );
+  const openPanelCmd = vscode.commands.registerCommand("knit.openDiagramPanel", async () => {
+    const panel = vscode.window.createWebviewPanel(
+      "knitGraphPanel", // viewType
+      "Knit Dependency Graph", // title
+      vscode.ViewColumn.Two,
+      {
+        enableScripts: true,
+        localResourceRoots: [
+          vscode.Uri.joinPath(context.extensionUri, "out"),
+          vscode.Uri.joinPath(context.extensionUri, "resources"),
+        ],
+      },
+    )
 
-  // Add panel to the set
-  diagramPanels.add(panel);
+    // Add panel to the set
+    diagramPanels.add(panel)
 
-  panel.onDidDispose(() => {
-    // Remove from set when disposed
-    diagramPanels.delete(panel);
-  });
+    panel.onDidDispose(() => {
+      // Remove from set when disposed
+      diagramPanels.delete(panel)
+    })
 
-  // Build html and scripts
-  panel.webview.html = getHtml(context, panel.webview);
+    panel.webview.onDidReceiveMessage(
+      (message) => {
+        switch (message.type) {
+          case "navigateToNode":
+            // Handle navigation to specific node/file
+            vscode.window.showInformationMessage(`Navigating to: ${message.nodeId}`)
+            // TODO: Implement actual file navigation based on node data
+            // Example: vscode.workspace.openTextDocument(filePath);
+            break
+          case "exportGraph":
+            // Handle graph export
+            vscode.window.showInformationMessage("Exporting graph...")
+            // TODO: Implement graph export functionality
+            break
+          default:
+            break
+        }
+      },
+      undefined,
+      context.subscriptions,
+    )
 
-  // Watch for changes only while this panel is open
-  const disposable = vscode.workspace.onDidChangeTextDocument(event => {
-    // In future: adapt to your data source changes
-    if (event.document.fileName.endsWith(".mmd") || event.document.fileName.endsWith('.json')) {
-      diagramPanels.forEach(panel => {
-        panel.webview.postMessage({ type: "update" });
-      });
-    }
-  });
+    // Build html and scripts
+    panel.webview.html = getHtml(context, panel.webview)
 
-  panel.onDidDispose(() => disposable.dispose());
-});
+    // Watch for changes only while this panel is open
+    const disposable = vscode.workspace.onDidChangeTextDocument((event) => {
+      // In future: adapt to your data source changes
+      if (event.document.fileName.endsWith(".mmd") || event.document.fileName.endsWith(".json")) {
+        diagramPanels.forEach((panel) => {
+          panel.webview.postMessage({ type: "update" })
+        })
+      }
+    })
+
+    panel.onDidDispose(() => disposable.dispose())
+  })
 
   // Close WebviewPanel command
-let closePanelCmd = vscode.commands.registerCommand("knit.closeDiagramPanel", () => {
-  // Dispose all currently open diagram panels
-  diagramPanels.forEach(panel => panel.dispose());
-  diagramPanels.clear();
-});
+  const closePanelCmd = vscode.commands.registerCommand("knit.closeDiagramPanel", () => {
+    // Dispose all currently open diagram panels
+    diagramPanels.forEach((panel) => panel.dispose())
+    diagramPanels.clear()
+  })
 
-  context.subscriptions.push(helloCmd, watchCmd, openPanelCmd, closePanelCmd);
+  context.subscriptions.push(helloCmd, watchCmd, openPanelCmd, closePanelCmd)
 
   // Optional: open automatically on activation
-  vscode.commands.executeCommand("knit.openDiagramPanel");
+  vscode.commands.executeCommand("knit.openDiagramPanel")
 }
 
 // Generate the webview HTML
 function getHtml(context: vscode.ExtensionContext, webview: vscode.Webview): string {
-  const nonce = getNonce();
-  const d3Cdn = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
-  const scriptUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(context.extensionUri, 'out', 'webview', 'graph.js')
-  );
+  const nonce = getNonce()
+  const d3Cdn = "https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"
+  const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, "out", "webview", "graph.js"))
 
   const csp = [
     `default-src 'none'`,
     `img-src ${webview.cspSource} https: data:`,
     `style-src ${webview.cspSource} 'unsafe-inline'`,
     `font-src ${webview.cspSource} https:`,
-    `script-src ${webview.cspSource} https: 'unsafe-inline'`,
-    `connect-src ${webview.cspSource}`
-  ].join('; ');
+    `script-src ${webview.cspSource} 'nonce-${nonce}'`,
+    `connect-src ${webview.cspSource}`,
+  ].join("; ")
 
   return `
   <!DOCTYPE html>
@@ -163,32 +139,86 @@ function getHtml(context: vscode.ExtensionContext, webview: vscode.Webview): str
       html, body { height: 100%; }
       body { padding: 0; margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
       #app { height: 100vh; display: flex; flex-direction: column; }
+      
+      /* Enhanced styling for controls and graph */
+      .controls {
+        padding: 10px;
+        background: #f5f5f5;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      
+      .control-group {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+      }
+      
+      .control-group label {
+        font-size: 12px;
+        font-weight: 500;
+      }
+      
+      button {
+        padding: 4px 8px;
+        font-size: 12px;
+        border: 1px solid #ccc;
+        background: white;
+        cursor: pointer;
+        border-radius: 3px;
+      }
+      
+      button:hover {
+        background: #f0f0f0;
+      }
+      
+      .selected-info {
+        font-size: 12px;
+        color: #666;
+      }
+      
+      .legend {
+        display: flex;
+        gap: 15px;
+        font-size: 11px;
+      }
+      
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      
+      .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      
+      #graph-container {
+        flex: 1;
+        overflow: hidden;
+      }
     </style>
   </head>
   <body>
     <div id="app"></div>
-  <script nonce="${nonce}" src="${d3Cdn}"></script>
-  <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
+    <script nonce="${nonce}" src="${d3Cdn}"></script>
+    <script nonce="${nonce}" type="module" src="${scriptUri}"></script>
   </body>
-  </html>`;
+  </html>`
 }
 
 function getNonce() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let nonce = '';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  let nonce = ""
   for (let i = 0; i < 32; i++) {
-    nonce += chars.charAt(Math.floor(Math.random() * chars.length));
+    nonce += chars.charAt(Math.floor(Math.random() * chars.length))
   }
-  return nonce;
+  return nonce
 }
 
-export function deactivate() {
-  deactivateWatchers();
-}
-export function deactivateWatchers() {
-  watcherProcs.forEach((p) => {
-    try { p.kill(); } catch {}
-  });
-  watcherProcs.clear();
-  isWatchRunning = false;
-}
+export function deactivate() {}
