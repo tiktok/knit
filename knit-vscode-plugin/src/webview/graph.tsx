@@ -1,20 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import { createRoot } from "react-dom/client";
-
-export interface Node {
-  name: string;
-  is_optimistic: boolean;
-  is_source_error: boolean;
-  error_message?: string;
-  is_in_last_update: boolean;
-  has_upstream_error: boolean;
-}
-
-export interface AdjacencyList {
-  nodes: Record<string, Node>;
-  edges: [string, string][];
-}
+import type { AdjacencyList } from "../knit/interfaces";
 
 interface GraphProps { data: AdjacencyList; }
 
@@ -30,7 +17,7 @@ const Graph: React.FC<GraphProps> = ({ data }) => {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const nodes = Object.values(data.nodes).map(n => ({ ...n }));
+  const nodes = Object.values(data.nodes).map(n => ({ ...n }));
     const links = data.edges.map(([source, target]) => ({ source, target }));
 
     const simulation = d3
@@ -51,9 +38,9 @@ const Graph: React.FC<GraphProps> = ({ data }) => {
       .selectAll("circle").data(nodes).enter().append("circle")
       .attr("r", 12)
       .attr("fill", (d: any) =>
-        d.is_source_error ? "red" :
-        d.has_upstream_error ? "orange" :
-        d.is_optimistic ? "lightblue" : "gray"
+        d.isSourceError ? "red" :
+        d.hasUpstreamError ? "orange" :
+        d.isOptimistic ? "lightblue" : "gray"
       )
       .call(
         d3.drag<SVGCircleElement, any>()
@@ -95,24 +82,24 @@ const Graph: React.FC<GraphProps> = ({ data }) => {
   return <svg ref={svgRef}></svg>;
 };
 
-// --- Sample data so the panel shows something immediately ---
-const sampleData: AdjacencyList = {
-  nodes: {
-    A: { name: "A", is_optimistic: false, is_source_error: false, is_in_last_update: true,  has_upstream_error: false },
-    B: { name: "B", is_optimistic: true,  is_source_error: false, is_in_last_update: false, has_upstream_error: false },
-    C: { name: "C", is_optimistic: false, is_source_error: true,  error_message: "Failed to load", is_in_last_update: false, has_upstream_error: false },
-    D: { name: "D", is_optimistic: false, is_source_error: false, is_in_last_update: true,  has_upstream_error: true }
-  },
-  edges: [["A","B"], ["B","C"], ["A","D"]]
-};
-
-const GraphDemo: React.FC = () => <Graph data={sampleData} />;
-
-// --- Mount into the webview ---
+// --- Mount into the webview and wait for data from the extension ---
 const container = document.getElementById("app");
 if (container) {
-  createRoot(container).render(<GraphDemo />);
-  console.log("graph mounted");
+  const root = createRoot(container);
+  const render = (payload: AdjacencyList) => {
+    root.render(<Graph data={payload} />);
+  };
+
+  // Listen for messages from the extension
+  window.addEventListener('message', (event: MessageEvent) => {
+    const msg = event.data;
+    if (msg?.type === 'graph-data' && msg?.payload) {
+      render(msg.payload as AdjacencyList);
+      console.log('Graph data received', msg.payload);
+    }
+  });
+
+  console.log("graph webview ready");
 } else {
   console.error("No #app container found");
 }
