@@ -23,11 +23,22 @@ class Visualiser:
         mermaid_diagram = [f"graph {direction}"]
 
         for node, neighbors in adjacency_list.items():
+            normalized_node = self.normalize_classname(node)
             if not neighbors:
                 # Add the node even if it has no edges
                 mermaid_diagram.append(f"    {node}")
             for neighbor in neighbors:
-                if node != neighbor:
+                normalized_neighbor = self.normalize_classname(neighbor)
+                if normalized_node != normalized_neighbor:
                     mermaid_diagram.append(f"    {node} --> {neighbor}")
 
         return "\n".join(mermaid_diagram)
+    
+    def normalize_classname(self, classname):
+        """
+        Normalize the class name to ensure consistency between different formats.
+
+        :param classname: The class name (e.g., "knit.Loadable" or "knit/Loadable").
+        :return: The normalized class name (e.g., "knit_Loadable").
+        """
+        return classname.replace('.', '_').replace('/', '_')
