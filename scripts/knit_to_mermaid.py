@@ -3,8 +3,10 @@
 import os
 import json
 import argparse
+from time import sleep
 from adjacency_list import AdjacencyList  # Import the AdjacencyList class
 from visualiser import Visualiser  # Import the Visualiser class
+from diagram_updater import DiagramUpdater
 
 def generate_mermaid_from_json(json_file_path, output_file_path="", direction="TD"):
     """Generate a Mermaid diagram from a Knit dependency JSON file."""
@@ -45,10 +47,21 @@ def main():
     parser.add_argument('json_file', help='Path to the Knit dependency JSON file')
     parser.add_argument('-o', '--output', help='Output file path for the Mermaid diagram', default="")
     parser.add_argument('-d', '--direction', help='Diagram direction (TD, LR, RL, BT)', default="TD")
+    parser.add_argument('-p', '--poll_interval', help='Polling interval in seconds', type=int, default=2)
 
     args = parser.parse_args()
 
-    generate_mermaid_from_json(args.json_file, args.output, args.direction)
+    # Determine output file path if not provided
+    output_file = args.output or os.path.splitext(args.json_file)[0] + ".mmd"
+
+    # Instantiate and start the DiagramUpdater
+    updater = DiagramUpdater(args.json_file, output_file, args.direction, args.poll_interval)
+    try:
+        updater.start()
+        while True:
+            sleep(1)  # Keep the main thread alive
+    except KeyboardInterrupt:
+        updater.stop()
 
 if __name__ == '__main__':
     main()
