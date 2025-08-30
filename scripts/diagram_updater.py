@@ -42,6 +42,8 @@ class DiagramUpdater:
             # Mark full build as last update for all nodes
             self.adjacency_list.reset_last_update_flags()
             self.adjacency_list.mark_full_build_update()
+            # Recompute upstream error impact flags
+            self.adjacency_list.propagate_error_flags_from_adj(self.current_adj)
             mermaid_content = self.visualiser.build_mermaid_diagram(adjacency_list, self.direction)
             os.makedirs(os.path.dirname(self.output_file_path), exist_ok=True)
             with open(self.output_file_path, 'w') as f:
@@ -91,6 +93,8 @@ class DiagramUpdater:
             self.adjacency_list.reset_last_update_flags()
             self.adjacency_list.apply_status_change(change_data)
             self.current_adj = self.incremental.apply_change(self.current_adj, change_data)
+            # Recompute upstream error impact flags
+            self.adjacency_list.propagate_error_flags_from_adj(self.current_adj)
             mermaid_content = self.visualiser.build_mermaid_diagram(self.current_adj, self.direction)
             os.makedirs(os.path.dirname(self.output_file_path), exist_ok=True)
             with open(self.output_file_path, 'w') as f:
