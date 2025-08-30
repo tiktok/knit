@@ -1,33 +1,34 @@
 {
   "name": "knit-vscode-plugin",
-  "displayName": "knit-vscode-plugin",
-  "description": "",
+  "displayName": "Knit VSCode Plugin",
+  "description": "Knit development tools with Gradle watcher and dependency graph panel.",
   "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.103.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "onCommand:extension.startKnit"
-  ],
+  "engines": { "vscode": "^1.103.0" },
+  "categories": ["Other"],
+  "activationEvents": ["*"],
   "main": "./out/extension.js",
-
   "contributes": {
     "commands": [
       {
         "command": "knit-vscode-plugin.helloWorld",
         "title": "Hello World"
       },
-      
       {
         "command": "knit.watchJar",
-      "title": "Knit: Watch and Build ShadowJar"
+        "title": "Knit: Watch and Build ShadowJar"
       }
-    
+    ],
+      "keybindings": [
+    {
+      "command": "knit.openDiagramPanel",
+      "key": "ctrl+alt+d"
+    },
+    {
+      "command": "knit.closeDiagramPanel",
+      "key": "ctrl+alt+f"
+    } 
     ]
-  },
+},
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
@@ -36,7 +37,6 @@
     "lint": "eslint src",
     "test": "vscode-test"
   },
-
   "devDependencies": {
     "@types/vscode": "^1.103.0",
     "@types/mocha": "^10.0.10",
@@ -48,5 +48,4 @@
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2"
   }
-
 }
