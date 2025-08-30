@@ -93,6 +93,7 @@ if (container) {
   // Listen for messages from the extension
   window.addEventListener('message', (event: MessageEvent) => {
     const msg = event.data;
+    console.log("message received. attempting to process data");
     if (msg?.type === 'graph-data' && msg?.payload) {
       render(msg.payload as AdjacencyList);
       console.log('Graph data received', msg.payload);

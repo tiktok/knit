@@ -50,6 +50,8 @@
     "build": "npm run build:ext && npm run build:webview",
     "watch:all": "npm-run-all -p watch watch:webview",
 
+  "compute:adj": "node scripts/computeAdj.mjs",
+
     "pretest": "npm run build && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test"
