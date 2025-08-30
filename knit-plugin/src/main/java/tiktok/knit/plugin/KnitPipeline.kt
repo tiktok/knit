@@ -213,39 +213,101 @@ class KnitPipeline(
             now[key] = cur.copy(status = status.takeIf { it.error == true || it.optimistic == true }, delta = delta)
         }
 
-        // Write delta log (derived) and optimistic section
-        run {
-            val deltaLog = File(dumpOutputFile.parentFile, "knit.delta.log")
-            deltaLog.bufferedWriter().use { w ->
-                w.appendLine("Knit incremental delta (derived):")
-                w.appendLine("- removedCount: ${removed.size}")
-                removed.sorted().forEach { w.appendLine("  - REMOVED $it") }
-                w.appendLine("- addedCount: ${added.size}")
-                added.sorted().forEach { w.appendLine("  - ADDED $it") }
-                w.appendLine("- updatedCount: ${updated.size}")
-                updated.sorted().forEach { w.appendLine("  - UPDATED $it") }
-                if (errorComponents.isNotEmpty()) {
-                    w.appendLine()
-                    w.appendLine("Optimistic view due to errors:")
-                    w.appendLine("- errorAffectedCount: ${errorComponents.size}")
-                    errorComponents.sorted().forEach { w.appendLine("  - ERROR $it") }
+        // Build change-only dump (same structure as knit.json): only changed keys with status/delta
+        val changesOnly = ComponentDumps().apply {
+            // removed
+            removed.forEach { key ->
+                this[key] = ComponentDump.default.copy(
+                    status = Status(
+                        error = false,
+                        optimistic = errorComponents.isNotEmpty(),
+                        removed = true,
+                        added = false,
+                    ),
+                    delta = Delta(
+                        parentsRemoved = prev?.get(key)?.parent,
+                        compositeRemoved = prev?.get(key)?.composite?.keys?.toList(),
+                        injectionsRemovedKeys = prev?.get(key)?.injections?.keys?.toList(),
+                        providersRemoved = prev?.get(key)?.providers?.map { it.provider },
+                    ),
+                )
+            }
+            // added
+            added.forEach { key ->
+                val cur = now[key]
+                if (cur != null) {
+                    this[key] = cur.copy(
+                        status = (cur.status ?: Status()).copy(
+                            added = true,
+                            removed = false,
+                            optimistic = errorComponents.isNotEmpty(),
+                            error = (cur.status?.error == true) || (key in errorComponents),
+                        ),
+                        delta = (cur.delta ?: Delta()).copy(
+                            parentsAdded = cur.parent,
+                            compositeAdded = cur.composite?.keys?.toList(),
+                            injectionsAddedKeys = cur.injections?.keys?.toList(),
+                            providersAdded = cur.providers?.map { it.provider },
+                        ),
+                    )
+                }
+            }
+            // updated
+            updated.forEach { key ->
+                val cur = now[key]
+                if (cur != null) {
+                    this[key] = cur.copy(
+                        status = (cur.status ?: Status()).copy(
+                            optimistic = errorComponents.isNotEmpty(),
+                            error = (cur.status?.error == true) || (key in errorComponents),
+                            added = false,
+                            removed = false,
+                        ),
+                        delta = cur.delta,
+                    )
                 }
             }
         }
 
-        // Persist current dump
-    if (!dumpOutputFile.parentFile.exists()) dumpOutputFile.parentFile.mkdirs()
-    dumpOutputFile.bufferedWriter().use { gson.toJson(now, it) }
+        // Persist change-only dump to a timestamped file
+        val changesDir = File(dumpOutputFile.parentFile, "changes").apply { mkdirs() }
+        val ts = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS").format(java.time.LocalDateTime.now())
+        val changeFile = File(changesDir, "knit-change-$ts.json")
+        changeFile.bufferedWriter().use { gson.toJson(changesOnly, it) }
+
+        // Write a machine-friendly batch metadata sidecar file
+        run {
+            val meta = linkedMapOf<String, Any>(
+                "timestamp" to java.time.Instant.now().toString(),
+                "baselineExists" to (prev != null),
+                "optimistic" to (errorComponents.isNotEmpty()),
+                "changeFile" to changeFile.name,
+                "counts" to mapOf(
+                    "added" to added.size,
+                    "removed" to removed.size,
+                    "updated" to updated.size,
+                    "errorAffected" to errorComponents.size,
+                ),
+                "added" to added.sorted(),
+                "removed" to removed.sorted(),
+                "updated" to updated.sorted(),
+                "errorAffected" to errorComponents.map { it }.sorted(),
+            )
+            // Write timestamped meta
+            File(changesDir, "knit-change-$ts.meta.json").bufferedWriter().use { gson.toJson(meta, it) }
+            // Update 'latest' pointers for fast watcher discovery (no symlinks for cross-platform safety)
+            File(changesDir, "latest.meta.json").bufferedWriter().use { gson.toJson(meta, it) }
+            File(changesDir, "latest.txt").writeText(changeFile.name)
+        }
+
+        // Persist baseline dump only if none exists yet
+        if (!dumpOutputFile.parentFile.exists()) dumpOutputFile.parentFile.mkdirs()
+        if (prev == null) {
+            dumpOutputFile.bufferedWriter().use { gson.toJson(now, it) }
+        }
         val dumpDuration = System.currentTimeMillis() - dumpStart
         Logger.i("dump knit info cost: ${dumpDuration}ms")
 
-        // Write errors log if any binding errors were captured
-        if (bindingErrors.isNotEmpty()) {
-            val errorsLog = File(dumpOutputFile.parentFile, "knit.errors.log")
-            errorsLog.bufferedWriter().use { w ->
-                w.appendLine("Knit binding errors (non-fatal):")
-                bindingErrors.forEach { w.appendLine("- $it") }
-            }
-        }
+    // No separate error/delta logs; errors are reflected via status within the change file
     }
 }

@@ -65,6 +65,8 @@ data class ComponentDump(
 data class Status(
     val error: Boolean? = null,
     val optimistic: Boolean? = null,
+    val added: Boolean? = null,
+    val removed: Boolean? = null,
 )
 
 data class Delta(
