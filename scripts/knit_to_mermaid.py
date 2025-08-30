@@ -38,7 +38,7 @@ def generate_mermaid_from_json(json_file_path, output_file_path="", direction="T
 
         print(f"Generated Mermaid diagram at: {output_file_path}")
     except Exception as e:
-        print(f"ERROR: Failed to generate Mermaid diagram: {str(e)}")
+        print(f"ERROR: (generate_mermaid_from_json) Failed to generate Mermaid diagram: {str(e)}")
 
 def main():
     parser = argparse.ArgumentParser(description='Generate Mermaid diagram from Knit dependency JSON')

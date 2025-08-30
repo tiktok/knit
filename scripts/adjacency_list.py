@@ -29,22 +29,22 @@ class AdjacencyList:
         rhs = re.sub(r'<[^<>]*>', '', rhs).strip()
         return rhs.strip('() ')
 
-    def get_nodes_and_edges(self, data: json):
-        """Extract edges from a Knit dependency JSON file."""
-
+    def get_nodes_and_edges(self, data: dict):
+        """Extract edges from a Knit dependency JSON object."""
         for classname, details in data.items():
-            node = classname
-            self.nodes[classname] = node
-            
+            normalized_classname = self.normalize_classname(classname)
+            if normalized_classname not in self.nodes:
+                self.nodes[normalized_classname] = normalized_classname
+
             for provider_entry in details.get('providers', []):
-                
                 provider = provider_entry.get('provider', '')
-
                 consumer = self.extract_consumer_from_provider(provider)
-                if consumer and consumer != classname:
-                    self.edges.append((consumer, classname))
+                if consumer:
+                    normalized_consumer = self.normalize_classname(consumer)
+                    self.edges.append((normalized_consumer, normalized_classname))
 
-        return self.nodes, self.edges 
+
+        return self.nodes, self.edges
     
     def build_adjacency_list(self, file: json):
 
@@ -69,3 +69,12 @@ class AdjacencyList:
             print(f"{vertex} -> {' '.join(map(str, neighbors))}")
         
         return adjacency_list
+    
+    def normalize_classname(self, classname):
+        """
+        Normalize the class name to ensure consistency between different formats.
+
+        :param classname: The class name (e.g., "knit.Loadable" or "knit/Loadable").
+        :return: The normalized class name (e.g., "knit_Loadable").
+        """
+        return classname.replace('.', '_').replace('/', '_')
