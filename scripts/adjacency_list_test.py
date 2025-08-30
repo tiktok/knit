@@ -1,10 +1,9 @@
 import unittest
-import json
-from adjacency_list import AdjacencyList
+from scripts.adjacency_list import AdjacencyList
+
 
 class TestAdjacencyList(unittest.TestCase):
     def setUp(self):
-        # Sample JSON data for testing
         self.sample_json = {
             "knit/demo/AddCommand": {
                 "parent": ["knit.demo.GitCommand"],
@@ -14,20 +13,20 @@ class TestAdjacencyList(unittest.TestCase):
                         "parameters": [
                             "knit.demo.MemoryFileSystem",
                             "knit.demo.MemoryObjectStore",
-                            "knit.demo.StagingArea"
-                        ]
+                            "knit.demo.StagingArea",
+                        ],
                     }
-                ]
+                ],
             },
             "knit/demo/AuditLogger": {
                 "parent": ["java.lang.Object"],
                 "providers": [
                     {
                         "provider": "knit.demo.AuditLogger.<init> -> knit.demo.AuditLogger",
-                        "parameters": ["knit.demo.EventBus"]
+                        "parameters": ["knit.demo.EventBus"],
                     }
-                ]
-            }
+                ],
+            },
         }
         self.adjacency_list = AdjacencyList()
 
@@ -43,14 +42,14 @@ class TestAdjacencyList(unittest.TestCase):
     def test_get_nodes_and_edges(self):
         nodes, edges = self.adjacency_list.get_nodes_and_edges(self.sample_json)
         self.assertEqual(len(nodes), 2)
-        self.assertIn("knit/demo/AddCommand", nodes)
-        self.assertIn(("knit.demo.GitCommand", "knit/demo/AddCommand"), edges)
+        self.assertIn("knit_demo_AddCommand", nodes)
+        self.assertIn(("knit_demo_GitCommand", "knit_demo_AddCommand"), edges)
 
     def test_build_adjacency_list(self):
         adj_list = self.adjacency_list.build_adjacency_list(self.sample_json)
-        print("|||||||||||||||||||||||||||||||||||||\n\n", adj_list, "\n\n|||||||||||||||||||||||||||||||||||||")
-        #self.assertIn("knit.demo.GitCommand", adjacency_list)
-        #self.assertIn("knit/demo/AddCommand", adjacency_list["knit.demo.GitCommand"])
+        self.assertIn("knit_demo_GitCommand", adj_list)
+        self.assertIn("knit_demo_AddCommand", adj_list["knit_demo_GitCommand"])
+
 
 if __name__ == "__main__":
     unittest.main()
