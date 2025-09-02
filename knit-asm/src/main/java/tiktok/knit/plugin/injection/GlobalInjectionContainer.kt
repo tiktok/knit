@@ -17,14 +17,18 @@ class GlobalInjectionContainer(
     private val _all: Set<SourcedMethod> = allComponents.asSequence()
         .flatMap { it.provides.asSequence() }
         .filter { it.staticProvides }
-        .map { Injection.From.GLOBAL(it) }.toSet()
+        .map { Injection.From.GLOBAL(it) }
+        .toSortedSet(sourcedMethodComparator)
 
     val all: Set<SourcedMethod> = _all.filterNotTo(LinkedHashSet()) { it.method.isVM() }
+        .toSortedSet(sourcedMethodComparator)
     val allVM: Set<SourcedMethod> = _all.filterTo(LinkedHashSet()) { it.method.isVM() }
+        .toSortedSet(sourcedMethodComparator)
 
     val allSingletons: Map<InternalName, List<KnitSingleton>> = allComponents
         .associate { it.internalName to it.singletons }
         .mapValues { entry -> entry.value.filter { it.global } }
+        .toSortedMap()
 
     val vmProviders by lazy { getAllVmProviders() }
 
@@ -38,6 +42,11 @@ class GlobalInjectionContainer(
                 methods += providesMethod
             }
         }
-        return result
+        return result.toSortedMap()
     }
 }
+
+private val sourcedMethodComparator = compareBy<SourcedMethod>(
+    { it.method.identifier },
+    { it.from },
+)
