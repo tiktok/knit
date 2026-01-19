@@ -217,7 +217,7 @@ fun Injection.dynamicInjection(): Injection {
 }
 
 class DelegateClassLoader(
-    val context: KnitContext, parent: ClassLoader, classNodes: List<ClassNode>
+    val context: KnitContext, parent: ClassLoader, private val classNodes: List<ClassNode>
 ) : ClassLoader(parent) {
     private val nodeNames = classNodes.associateBy { Type.getObjectType(it.name).className }
     override fun loadClass(name: String, resolve: Boolean): Class<*> {
@@ -247,8 +247,8 @@ class DelegateClassLoader(
     }
 
     fun dump(dir: File = File("").absoluteFile) {
-        for ((_, node) in nodeNames) {
-            val visitor = ClassWriter(ClassWriter.COMPUTE_MAXS or ClassWriter.COMPUTE_FRAMES)
+        for (node in classNodes) {
+            val visitor = ClassWriter(0)
             val file = File(dir, "${node.name}.class")
             if (!file.parentFile.exists()) file.parentFile.mkdirs()
             if (file.exists()) file.delete()

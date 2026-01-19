@@ -69,8 +69,9 @@ object DIGetterStubImpl : AbsDIStub()
 object DIStubImpl : AbsDIStub()
 
 /** common delegate implementation stub */
-abstract class AbsDIStub : ReadOnlyProperty<Any, Nothing> {
-    override operator fun getValue(thisRef: Any, property: KProperty<*>): Nothing {
+abstract class AbsDIStub {
+    // knit di impl for member property injection
+    operator fun <T> getValue(thisRef: Any, property: KProperty<*>): T {
         throw knitStubImplementationError(thisRef, property)
     }
 

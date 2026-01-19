@@ -53,6 +53,7 @@ val MethodNode.allAnnotations
 
 val function0Desc: DescName = Factory::class.descName
 val objectInternalName = Any::class.internalName
+val objectType: Type = Type.getType(Any::class.java)
 
 val componentDesc: DescName = Component::class.descName
 val providesDesc: DescName = Provides::class.descName

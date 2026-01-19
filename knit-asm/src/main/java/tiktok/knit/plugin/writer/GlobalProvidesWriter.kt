@@ -20,6 +20,8 @@ import tiktok.knit.plugin.areturn
 import tiktok.knit.plugin.astore
 import tiktok.knit.plugin.athrow
 import tiktok.knit.plugin.basicTypeIndex
+import tiktok.knit.plugin.box
+import tiktok.knit.plugin.checkCast
 import tiktok.knit.plugin.dup
 import tiktok.knit.plugin.element.KnitSingleton
 import tiktok.knit.plugin.element.ProvidesMethod
@@ -33,6 +35,8 @@ import tiktok.knit.plugin.ldc
 import tiktok.knit.plugin.monitorIn
 import tiktok.knit.plugin.monitorOut
 import tiktok.knit.plugin.new
+import tiktok.knit.plugin.objectInternalName
+import tiktok.knit.plugin.objectType
 import tiktok.knit.plugin.putStatic
 import tiktok.knit.plugin.sameFrame
 import tiktok.knit.plugin.sameFrame1Throwable
@@ -59,15 +63,15 @@ class GlobalProvidesWriter(private val context: KnitContext) {
         }
         for ((_, providesMethod) in allMethods) {
             val containerName: InternalName = providesMethod.containerClass
-            var providesMethodId = providesMethod.globalBytecodeIdentifier()
             // method desc is used for generated function desc
-            val methodDesc = if (providesMethod.isConstructorLike()) {
-                val newMethod = providesMethod.copy(functionName = "<init>")
-                providesMethodId = newMethod.globalBytecodeIdentifier()
-                newMethod.descWithReturnType()
-            } else {
-                providesMethod.desc
-            }
+            val providesMethodId: String =
+                if (providesMethod.isConstructorLike()) {
+                    // turns to standard init function
+                    providesMethod.copy(functionName = "<init>")
+                } else {
+                    providesMethod
+                }.globalBytecodeIdentifier()
+            val methodDesc = providesMethod.globalCallDesc()
             val singletonList = singletons[containerName]
             val singleton = singletonList?.firstOrNull {
                 it.funcName == providesMethod.functionName &&
@@ -113,7 +117,8 @@ class GlobalProvidesWriter(private val context: KnitContext) {
         val lockType = Type.getType(typeDesc)
         val access = if (singleton.threadSafe) THREAD_SAFE_FIELD_ACCESS else FIELD_ACCESS
         node.fields.add(
-            FieldNode(access, providesMethodId, typeDesc, null, null),
+            // store singleton object as `Object` type
+            FieldNode(access, providesMethodId, objectType.descriptor, null, null),
         )
         val methodNode = MethodNode(
             METHOD_ACCESS, providesMethodId,
@@ -123,7 +128,7 @@ class GlobalProvidesWriter(private val context: KnitContext) {
         node.methods.add(methodNode)
         methodNode.instructions = InsnList().apply {
             fun getFieldAndLoad() {
-                getStatic(node.name, providesMethodId, typeDesc)
+                getStatic(node.name, providesMethodId, objectType.descriptor)
                 astore(argCount)
                 aload(argCount)
             }
@@ -134,7 +139,7 @@ class GlobalProvidesWriter(private val context: KnitContext) {
 
                 // store cache, Global.backingField = result
                 aload(argCount)
-                putStatic(node.name, providesMethodId, typeDesc)
+                putStatic(node.name, providesMethodId, objectType.descriptor)
             }
 
             getFieldAndLoad()
@@ -172,7 +177,7 @@ class GlobalProvidesWriter(private val context: KnitContext) {
 
                 // backing field non-null, synchronized end
                 +innerIfLabel
-                appendFrameWithType(providesMethod.actualType.internalName)
+                appendFrameWithType(objectInternalName)
                 ldc(lockType)
                 monitorOut()
             } else {
@@ -220,11 +225,20 @@ class GlobalProvidesWriter(private val context: KnitContext) {
             when (argTypeIndex) {
                 3, 5 -> appendedIndices++
             }
+            if (argTypeIndex == -1 && argType != objectType) {
+                // not `Object` type, need a check cast
+                checkCast(argType.internalName)
+            }
         }
         if (isConstructor) {
             invokeSpecial(containerName, "<init>", providesMethod.desc)
         } else {
             invokeStatic(containerName, providesMethod.functionName, providesMethod.desc)
+        }
+        // global injection always get wrapped
+        val typeIndex = providesMethod.actualType.basicTypeIndex()
+        if (typeIndex >= 0) {
+            box(typeIndex)
         }
     }
 }

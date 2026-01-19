@@ -12,6 +12,7 @@ import tiktok.knit.plugin.aload
 import tiktok.knit.plugin.basicTypeIndex
 import tiktok.knit.plugin.basicTypes
 import tiktok.knit.plugin.box
+import tiktok.knit.plugin.checkCast
 import tiktok.knit.plugin.element.BoundComponentClass
 import tiktok.knit.plugin.getField
 import tiktok.knit.plugin.getFieldName
@@ -76,12 +77,9 @@ object DepsWriter {
             for (requirementInjection in injection.requirementInjections) {
                 buildRequirement(injectContext, requirementInjection)
             }
-            if (method.isConstructor()) {
-                val specialDesc = method.descWithReturnType()
-                invokeStatic(globalProvidesInternalName, method.globalBytecodeIdentifier(), specialDesc)
-            } else {
-                invokeStatic(globalProvidesInternalName, method.globalBytecodeIdentifier(), method.desc)
-            }
+            val globalCallDesc = method.globalCallDesc()
+            invokeStatic(globalProvidesInternalName, method.globalBytecodeIdentifier(), globalCallDesc)
+            checkCast(method.actualType.forceWrapped().internalName)
         } else if (method.isMultiBinding()) {
             val requirementInjections = injection.requirementInjections
             newArray(requirementInjections.size, objectInternalName)
@@ -118,10 +116,10 @@ object DepsWriter {
             invokeVirtualOrInterface(
                 providesOwner, method.functionName, method.desc, method.interfaceProvides,
             )
-        }
-        val basicTypeIndex = basicTypes.indexOf(method.actualType.classifier.desc)
-        if (basicTypeIndex >= 0) {
-            box(basicTypeIndex)
+            val basicTypeIndex = basicTypes.indexOf(method.actualType.classifier.desc)
+            if (basicTypeIndex >= 0) {
+                box(basicTypeIndex)
+            }
         }
     }
 

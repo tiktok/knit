@@ -9,6 +9,7 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.MethodNode
+import tiktok.knit.plugin.DescName
 import tiktok.knit.plugin.InheritJudgement
 import tiktok.knit.plugin.InternalName
 import tiktok.knit.plugin.MetadataContainer
@@ -40,7 +41,7 @@ data class KnitType(
     val named: String,
     val typeParams: List<KnitGenericType>,
 ) {
-    inline val descName: InternalName get() = classifier.desc
+    inline val descName: DescName get() = classifier.desc
     inline val internalName: InternalName get() = descName.toInternalName()
 
     fun availableFor(neededType: KnitType, inheritJudgement: InheritJudgement): Boolean {
@@ -55,7 +56,7 @@ data class KnitType(
             val thisDesc = classifier.desc
             val neededDesc = neededType.classifier.desc
             if (classifier.desc != neededDesc) {
-                // basic type judgement
+                // basic type judgment
                 val basicTypeIndex = basicTypes.indexOf(neededDesc)
                 if (basicTypeIndex != -1) {
                     val matchedWrapper = basicTypeWrapperDesc[basicTypeIndex]

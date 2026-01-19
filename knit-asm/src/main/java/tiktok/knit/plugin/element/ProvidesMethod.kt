@@ -12,11 +12,12 @@ import tiktok.knit.plugin.InternalName
 import tiktok.knit.plugin.MetadataContainer
 import tiktok.knit.plugin.MultiBindingType
 import tiktok.knit.plugin.Printer
+import tiktok.knit.plugin.basicTypeIndex
 import tiktok.knit.plugin.isPublic
 import tiktok.knit.plugin.isStatic
 import tiktok.knit.plugin.knitInternalError
 import tiktok.knit.plugin.mbBuilderInternalName
-import tiktok.knit.plugin.toObjDescName
+import tiktok.knit.plugin.objectType
 import kotlin.metadata.ExperimentalContextReceivers
 import kotlin.metadata.KmConstructor
 import kotlin.metadata.KmFunction
@@ -51,16 +52,31 @@ data class ProvidesMethod(
     val logName: String
         get() = Printer.method(this)
 
-    fun descWithReturnType(): String {
-        return desc.removeSuffix("V") + containerClass.toObjDescName()
-    }
-
     val identifier: String = "$containerClass $functionName $desc"
 
+    // used for function name and variable name if it is a global @Provides.
     fun globalBytecodeIdentifier(): String {
         val name = (containerClass + functionName + desc)
             .replace('/', '_')
         return "gi_" + name.filter { it.isJavaIdentifierPart() }
+    }
+
+    // used for call a global @Provides function.
+    // In global function real injection, arg type & return type will be erased.
+    //
+    // @Provides fun provideFoo(bar: Bar): Foo
+    // → fun gi_provideFoo(bar: Any): Any
+    fun globalCallDesc(): String {
+        val type = Type.getMethodType(desc)
+        val argumentTypes = type.argumentTypes
+        val newArgumentType = Array(argumentTypes.size) { objectType }
+        for ((i, argumentType) in argumentTypes.withIndex()) {
+            // normal object, skip
+            if (argumentType.basicTypeIndex() == -1) continue
+            // basic type, keep type
+            newArgumentType[i] = argumentType
+        }
+        return Type.getMethodDescriptor(objectType, *newArgumentType)
     }
 
     fun isConstructor() = functionName == "<init>"
