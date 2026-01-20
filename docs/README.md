@@ -372,7 +372,7 @@ Cons:
 You can using following order to decide how to test your code:
 
 1. DI framework is naturally easy to unit test by inject all things through constructor.
-2. Using mockk or other mocking framework to mock the dependency.
+2. Using MockK or other mocking framework to mock the dependency.
 
 Actually, we have implemented a unit test framework for Knit, which is based on run bytecode transformation at runtime, but it is very time costly because it needs to scan all runtime classpath to find all components, so we are still focused on how to optimize it and not published it yet.
 
