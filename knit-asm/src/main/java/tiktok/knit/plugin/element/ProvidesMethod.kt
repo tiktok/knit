@@ -260,7 +260,7 @@ data class ProvidesMethod(
 
             var annotationInfo = AnnotationReader.getProvidesAnnotationInfo(constructorNode)
             val providesTypes: List<KnitType>
-            // use constructor provides first
+            // 1. collect provides
             val constructorProvides = annotationInfo.providesTypes
             val classProvides = classProvidesInfo?.providesTypes
             providesTypes = when {
@@ -270,14 +270,22 @@ data class ProvidesMethod(
             }
             annotationInfo = annotationInfo.copy(providesTypes = providesTypes)
 
+            // 2. collect targets
+            val intoTarget = annotationInfo.intoTarget.ifEmpty {
+                classProvidesInfo?.intoTarget.orEmpty()
+            }
+
+            // 3. collect priority
+            var priority = annotationInfo.priority
+            if (priority == 0 && classProvidesInfo != null) {
+                priority = classProvidesInfo.priority
+            }
+
+            // collect requirements
             val requirements = kmConstructor.valueParameters.map {
                 KnitType.fromKmType(it.type, parentMapper, needVerify = true)
             }
             val isPublic = container.node.isPublic && constructorNode.isPublic
-
-            val intoTarget = annotationInfo.intoTarget.ifEmpty {
-                classProvidesInfo?.intoTarget.orEmpty()
-            }
 
             val onlyCollectionProvides = annotationInfo.onlyCollectionProvides
                 || classProvidesInfo?.onlyCollectionProvides == true
@@ -294,7 +302,7 @@ data class ProvidesMethod(
                 isPublic = isPublic,
                 staticProvides = true,
                 interfaceProvides = false,
-                priority = annotationInfo.priority,
+                priority = priority,
             )
         }
 

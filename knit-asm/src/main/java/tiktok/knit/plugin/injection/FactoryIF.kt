@@ -25,9 +25,10 @@ object FactoryIF : InjectionFactory {
         )
         val originInjections = InjectionBinder.buildInjectionFrom(innerFindingContext)
         if (originInjections.isEmpty()) return emptyList()
-        val providesMethod = methodFromLambda(component.internalName, returnType)
         return originInjections.map { injectionResult ->
             val injection = injectionResult.getOrElse { return@map Result.failure(it) }
+            val oldPriority = injection.providesMethod.priority
+            val providesMethod = methodFromLambda(component.internalName, returnType, oldPriority)
             Injection(requiredType, providesMethod, listOf(injection), injection.from).success
         }
     }
@@ -35,11 +36,13 @@ object FactoryIF : InjectionFactory {
     private fun methodFromLambda(
         containerClass: InternalName,
         providesType: KnitType,
+        oldPriority: Int,
     ): ProvidesMethod = ProvidesMethod.from(
         containerClass = containerClass,
         desc = ProvidesMethod.TAG_LAMBDA,
         functionName = ProvidesMethod.TAG_LAMBDA,
         actualType = providesType,
+        priority = oldPriority,
     )
 }
 

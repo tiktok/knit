@@ -4,7 +4,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
 import knit.Component
 import knit.IgnoreInjection
+import knit.KnitExperimental
 import knit.KnitViewModel
+import knit.Priority
 import knit.Provides
 import knit.android.internal.VMPFactoryImpl
 import knit.android.knitViewModel
@@ -97,5 +99,29 @@ class VMInjectTest : KnitTestCase {
     fun `test vm injection is ignored`() {
         val containers = readContainers3<IgnoreInjectionTestTarget, ChildVM, GlobalProvides>()
         containers.toContext().toClassLoader()
+    }
+
+    abstract class PrVM(val str: String) : ViewModel()
+    class VMLowPr @KnitViewModel(PrVM::class) constructor(str: String) : PrVM(str)
+
+    @OptIn(KnitExperimental::class)
+    class VMHighPr @KnitViewModel(PrVM::class) @Priority(1) constructor(str: String) : PrVM(str)
+
+    class VMPrTest : Fragment() {
+        private val vm by knitViewModel<PrVM>()
+
+        @Provides
+        val myStr: String = "114515"
+        fun validate() {
+            Assertions.assertInstanceOf(VMHighPr::class.java, vm)
+            Assertions.assertEquals(myStr, vm.str)
+        }
+    }
+
+    @Test
+    fun `test vm injection priority`() {
+        val containers = readContainers5<PrVM, VMLowPr, VMHighPr, VMPrTest, GlobalProvides>()
+        val loader = containers.toContext().toClassLoader()
+        loader.new<VMPrTest>()["validate"]()
     }
 }
