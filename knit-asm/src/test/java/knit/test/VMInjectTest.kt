@@ -1,3 +1,5 @@
+@file:OptIn(KnitExperimental::class)
+
 package knit.test
 
 import androidx.fragment.app.Fragment
@@ -17,6 +19,7 @@ import knit.test.base.knitTypeOf
 import knit.test.base.new
 import knit.test.base.readContainers3
 import knit.test.base.readContainers5
+import knit.test.base.readContainers6
 import knit.test.base.readContainers7
 import knit.test.base.toContext
 import org.junit.jupiter.api.Assertions
@@ -102,9 +105,8 @@ class VMInjectTest : KnitTestCase {
     }
 
     abstract class PrVM(val str: String) : ViewModel()
-    class VMLowPr @KnitViewModel(PrVM::class) constructor(str: String) : PrVM(str)
-
-    @OptIn(KnitExperimental::class)
+    class VMLowPr @KnitViewModel(PrVM::class) @Priority(-1) constructor(str: String) : PrVM(str)
+    class VMMidPr @KnitViewModel(PrVM::class) constructor(str: String) : PrVM(str)
     class VMHighPr @KnitViewModel(PrVM::class) @Priority(1) constructor(str: String) : PrVM(str)
 
     class VMPrTest : Fragment() {
@@ -120,7 +122,7 @@ class VMInjectTest : KnitTestCase {
 
     @Test
     fun `test vm injection priority`() {
-        val containers = readContainers5<PrVM, VMLowPr, VMHighPr, VMPrTest, GlobalProvides>()
+        val containers = readContainers6<PrVM, VMLowPr, VMMidPr, VMHighPr, VMPrTest, GlobalProvides>()
         val loader = containers.toContext().toClassLoader()
         loader.new<VMPrTest>()["validate"]()
     }
