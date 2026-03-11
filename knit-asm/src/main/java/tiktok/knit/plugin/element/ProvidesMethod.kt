@@ -111,6 +111,16 @@ data class ProvidesMethod(
             )
         }
 
+        fun fromThis(
+            containerClass: InternalName,
+        ): ProvidesMethod {
+            val actualType = KnitType.from(containerClass)
+            return from(
+                containerClass, desc = "()${actualType.descName}",
+                functionName = "this", actualType = actualType,
+            )
+        }
+
         private fun fromMethodNode(
             containerClassName: InternalName,
             methodNode: MethodNode,

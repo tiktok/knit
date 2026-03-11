@@ -222,3 +222,20 @@ private fun StringBuilder.injectionLog(injection: Injection) {
 class KnitSimpleError(
     override val message: String, override val cause: Throwable? = null
 ) : RuntimeException(message, cause)
+
+class CircularDependencyException(
+    private val componentName: String,
+    private val propertyGetter: String,
+    private val cycle: List<ProvidesMethod>,
+) : IllegalStateException() {
+    override val message: String
+        get() = buildString {
+            if (componentName.isNotBlank()) {
+                append("Detected circular dependency when inject: \n  $componentName.$propertyGetter\n")
+            }
+            cycle.forEachIndexed { index, method ->
+                append("  -> [$index] ${method.logName}\n")
+            }
+            append("  !-> [${cycle.size}] ${cycle.first().logName} (cycle repeats)")
+        }
+}

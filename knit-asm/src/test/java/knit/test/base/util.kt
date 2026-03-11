@@ -209,10 +209,10 @@ object BuiltinInheritJudgement : InheritJudgement {
 
 /** auto attach `this` component */
 fun Injection.dynamicInjection(): Injection {
-    val type = providesMethod.providesTypes.first()
-    val selfInjection = Injection(type, providesMethod, emptyList(), from)
+    val methodForThis = ProvidesMethod.fromThis(providesMethod.containerClass)
+    val injectionForThis = Injection(methodForThis.actualType, methodForThis, Injection.From.SELF)
     return copy(
-        requirementInjections = listOf(selfInjection) + requirementInjections,
+        requirementInjections = listOf(injectionForThis) + requirementInjections,
     )
 }
 

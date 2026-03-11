@@ -71,9 +71,9 @@ private fun SourcedMethod.buildInjection(
     val requirementInjections = arrayListOf<Result<Injection>>()
     if (!method.staticProvides) {
         // push first as for component itself
-        requirementInjections += Injection(
-            method.providesTypes.first(), method, from,
-        ).success
+        val methodForThis = ProvidesMethod.fromThis(method.containerClass)
+        val injectionForThis = Injection(methodForThis.actualType, methodForThis, Injection.From.SELF)
+        requirementInjections += injectionForThis.success
     }
 
     val rootMethod = rootProvides.method

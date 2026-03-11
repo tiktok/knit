@@ -12,6 +12,7 @@ import tiktok.knit.plugin.element.KnitType
 import tiktok.knit.plugin.element.ProvidesMethod
 import tiktok.knit.plugin.exactSingleInjection
 import tiktok.knit.plugin.injection.checker.ComponentChecker
+import tiktok.knit.plugin.injection.checker.InjectionChecker
 import tiktok.knit.plugin.injection.checker.ProvidesParentChecker
 
 /**
@@ -78,6 +79,7 @@ object InjectionBinder {
                 CPF.all(component, true).map { it.method }
             }.getOrThrow()
         }
+        InjectionChecker.check(component, injectionMap)
         return injectionMap
     }
 }
