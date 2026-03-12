@@ -224,9 +224,9 @@ class KnitSimpleError(
 ) : RuntimeException(message, cause)
 
 class CircularDependencyException(
-    private val componentName: String,
-    private val propertyGetter: String,
-    private val cycle: List<ProvidesMethod>,
+    internal val componentName: String,
+    internal val propertyGetter: String,
+    internal val cycle: List<ProvidesMethod>,
 ) : IllegalStateException() {
     override val message: String
         get() = buildString {

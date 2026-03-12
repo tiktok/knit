@@ -51,7 +51,7 @@ object InjectionChecker {
         val component: BoundComponentClass = context.component
         val currentPropGetter = context.currentPropGetter
         val providesMethod = injection.providesMethod
-        if (currentPropGetter == providesMethod.functionName) {
+        if (currentPropGetter == providesMethod.functionName && component.internalName == providesMethod.containerClass) {
             callStack.addLast(providesMethod)
             throw CircularDependencyException(component.internalName.fqn, currentPropGetter, callStack.toList())
         }

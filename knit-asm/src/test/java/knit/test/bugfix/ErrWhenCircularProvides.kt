@@ -10,9 +10,11 @@ import knit.internal.GlobalProvides
 import knit.test.base.KnitTestCase
 import knit.test.base.readContainers
 import knit.test.base.toContext
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import tiktok.knit.plugin.CircularDependencyException
+import tiktok.knit.plugin.fqn
 
 /**
  * Created by junyu on 2026/3/11
@@ -43,6 +45,8 @@ class ErrWhenCircularProvides : KnitTestCase {
         val e = assertThrows<CircularDependencyException> {
             containers.toContext().toClassLoader()
         }
+        Assertions.assertEquals(e.cycle.size, 3)
+        Assertions.assertEquals(e.componentName, Container::class.fqn)
         e.printStackTrace()
     }
 }
