@@ -46,8 +46,8 @@ data class KnitType(
 
     fun availableFor(neededType: KnitType, inheritJudgement: InheritJudgement): Boolean {
         // nullable / named
-        if (nullable != neededType.nullable ||
-            named != neededType.named // nullable we be treated as different type
+        if (nullable != neededType.nullable || // nullable will be treated as different type
+            named != neededType.named
         ) return false
 
         // type parameter
